@@ -6,30 +6,26 @@ using System.Text.Json;
 namespace TbhBot.Core.Update;
 
 /// <summary>
-/// Auto-update via GitHub Releases — porta de check_update/download_update/launch_updater
-/// do tbh_core.py (~linhas 16-92).
+/// Auto-update via GitHub Releases.
 ///
-/// E o caminho que faz o painel se curar sozinho quando O JOGO atualiza: cada release ja sai com os
-/// offsets do build novo embutidos (Offsets/offsets_&lt;hash&gt;.json), entao baixar a versao nova
-/// restaura tudo sem exigir .NET 6 / Il2CppDumper na maquina do usuario.
+/// Cada release TaskHeroX pode carregar os offsets do build novo embutidos
+/// (Offsets/offsets_&lt;hash&gt;.json), permitindo restaurar compatibilidade sem
+/// exigir ferramentas de desenvolvimento na maquina do usuario.
 /// </summary>
 public sealed class AutoUpdate
 {
-    // Repo de releases.
-    public const string Repo = "matheusbranhann/taskbarhero-bot";
+    public const string Repo = "tonesallan/taskherox";
 
     /// <summary>
-    /// Versao deste build. Vem do assembly (&lt;Version&gt; do Directory.Build.props) — UM lugar so
-    /// pra bumpar por release. Hardcodar aqui ja causou release publicado com versao velha.
+    /// Versao deste build. Vem do assembly (&lt;Version&gt; do Directory.Build.props).
     /// </summary>
     public static readonly string CurrentVersion = ResolveVersion();
 
     private static string ResolveVersion()
     {
-        var asm = System.Reflection.Assembly.GetEntryAssembly() ?? typeof(AutoUpdate).Assembly;
-        var info = asm.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+        var asm = Assembly.GetEntryAssembly() ?? typeof(AutoUpdate).Assembly;
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                       ?.InformationalVersion;
-        // "4.1.0+abc1234" (o SDK anexa o commit) -> "4.1.0"
         if (!string.IsNullOrWhiteSpace(info))
         {
             int plus = info.IndexOf('+');
@@ -38,8 +34,7 @@ public sealed class AutoUpdate
         return asm.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
-    // User-Agent OBRIGATORIO pela API do GitHub (rejeita requests sem UA).
-    private const string UserAgent = "tbh_bot-updater";
+    private const string UserAgent = "TaskHeroX-updater";
 
     private static readonly HttpClient Http = CreateClient();
 
@@ -51,10 +46,6 @@ public sealed class AutoUpdate
         return c;
     }
 
-    /// <summary>
-    /// 'v3.1'/'3.10' -> (3,1)/(3,10) pra comparar versao ordinalmente (funcao pura, testavel).
-    /// Igual ao _ver_tuple do Python: descarta o 'v', pega so digitos de cada segmento.
-    /// </summary>
     public static int[] VerTuple(string? s)
     {
         var trimmed = (s ?? "").TrimStart('v', 'V').Trim();
@@ -69,7 +60,6 @@ public sealed class AutoUpdate
         return outv;
     }
 
-    /// <summary>Compara duas tuplas de versao ordinalmente (como tuple do Python: elemento a elemento).</summary>
     public static int CompareVersions(string a, string b)
     {
         int[] ta = VerTuple(a), tb = VerTuple(b);
@@ -84,9 +74,8 @@ public sealed class AutoUpdate
     }
 
     /// <summary>
-    /// Consulta releases/latest do GitHub. Retorna (Available, Tag, Url) com Available=true so se houver
-    /// versao MAIOR que <paramref name="currentVersion"/> e um asset .zip. Silencioso em falha de rede.
-    /// Porta de check_update().
+    /// Consulta releases/latest do TaskHeroX. Retorna Available=true somente
+    /// quando existe versao maior e um asset .zip publicavel.
     /// </summary>
     public async Task<(bool Available, string Tag, string Url)> CheckAsync(
         string currentVersion, CancellationToken ct = default)
@@ -119,23 +108,17 @@ public sealed class AutoUpdate
         }
         catch
         {
-            // Silencioso: sem rede / rate-limit / json torto -> simplesmente sem update.
+            // Sem rede / rate-limit / release ausente -> segue sem update.
         }
         return (false, "", "");
     }
 
-    /// <summary>
-    /// Baixa o zip do release e extrai o exe do painel (TBH_Panel.exe / TbhBot*.exe) para
-    /// "&lt;exe atual&gt;.new.exe" ao lado do executavel corrente. Retorna (NewExe, Exe, ExeDir).
-    /// Porta de download_update().
-    /// </summary>
     public async Task<(string NewExe, string Exe, string ExeDir)> DownloadAndStageAsync(
         string url, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         string exe = CurrentExePath();
         string exeDir = Path.GetDirectoryName(exe) ?? Directory.GetCurrentDirectory();
 
-        // Baixa o zip inteiro pra memoria (com progresso, se Content-Length disponivel).
         using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct)
             .ConfigureAwait(false);
         resp.EnsureSuccessStatusCode();
@@ -159,7 +142,7 @@ public sealed class AutoUpdate
         buf.Position = 0;
         using var zip = new ZipArchive(buf, ZipArchiveMode.Read);
         var entry = zip.Entries.FirstOrDefault(e => IsPanelExe(e.Name))
-            ?? throw new InvalidOperationException("zip do release nao contem o exe do painel (TBH_Panel.exe/TbhBot*.exe)");
+            ?? throw new InvalidOperationException("zip do release nao contem TaskHeroX.exe");
 
         byte[] data;
         await using (var es = entry.Open())
@@ -169,7 +152,6 @@ public sealed class AutoUpdate
             data = ms.ToArray();
         }
 
-        // Sanidade: o exe real e dezenas de MB; muito menor = download torto/asset errado.
         if (data.Length < 1_000_000)
             throw new InvalidOperationException($"exe baixado pequeno demais ({data.Length} bytes)");
 
@@ -181,12 +163,12 @@ public sealed class AutoUpdate
     private static bool IsPanelExe(string name)
     {
         if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return false;
+        if (name.Equals("TaskHeroX.exe", StringComparison.OrdinalIgnoreCase)) return true;
+        // Compatibilidade temporaria durante a migracao do nome interno dos projetos.
         if (name.Equals("TBH_Panel.exe", StringComparison.OrdinalIgnoreCase)) return true;
         return name.StartsWith("TbhBot", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Conteudo do .bat updater: espera o PID sair, troca o exe (retenta ate destravar) e reabre.
-    // Porta de _UPDATER_BAT (CRLF, %~1=exe %~2=new %~3=pid).
     private const string UpdaterBat =
         "@echo off\r\n" +
         "setlocal\r\n" +
@@ -202,14 +184,9 @@ public sealed class AutoUpdate
         "start \"\" \"%EXE%\"\r\n" +
         "del \"%~f0\"\r\n";
 
-    /// <summary>
-    /// Escreve o .bat updater e o lanca DESACOPLADO. Ele espera ESTE processo (PID) sair, troca o exe
-    /// (&lt;exe&gt;.new.exe -> &lt;exe&gt;) e reabre o painel. O chamador deve encerrar logo apos, senao o
-    /// 'move' fica retentando ate o processo fechar. Porta de launch_updater().
-    /// </summary>
     public void LaunchUpdater(string newExe, string exe, string exeDir)
     {
-        string bat = Path.Combine(exeDir, "_tbh_update.bat");
+        string bat = Path.Combine(exeDir, "_taskherox_update.bat");
         File.WriteAllText(bat, UpdaterBat, System.Text.Encoding.ASCII);
 
         int pid = Environment.ProcessId;
@@ -228,12 +205,11 @@ public sealed class AutoUpdate
         Process.Start(psi);
     }
 
-    // Caminho do executavel corrente (equivalente a sys.executable no exe congelado).
     private static string CurrentExePath()
     {
         var p = Environment.ProcessPath;
         if (!string.IsNullOrEmpty(p)) return p;
         return Process.GetCurrentProcess().MainModule?.FileName
-            ?? Path.Combine(AppContext.BaseDirectory, "TbhBot.exe");
+            ?? Path.Combine(AppContext.BaseDirectory, "TaskHeroX.exe");
     }
 }
