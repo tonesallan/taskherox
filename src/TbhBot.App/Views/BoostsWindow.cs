@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using TbhBot.App.Services;
 
 namespace TbhBot.App.Views;
@@ -14,8 +16,12 @@ public sealed class BoostsWindow : Window
     private readonly EngineService _svc;
     private readonly BoostController _boosts;
     private readonly Dictionary<string, TextBlock> _factorLabels = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TextBlock> _valueLabels = new(StringComparer.Ordinal);
     private TextBlock _xpLabel = null!;
+    private TextBlock _xpValueLabel = null!;
     private readonly TextBlock _status;
+    private readonly DispatcherTimer _liveTimer;
+    private int _liveRefreshBusy;
 
     public BoostsWindow(EngineService svc, BoostController boosts)
     {
@@ -34,6 +40,9 @@ public sealed class BoostsWindow : Window
         Background = B("Bg");
         Foreground = B("Fg");
         FontFamily = (FontFamily)Application.Current.FindResource("UI");
+
+        _liveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _liveTimer.Tick += (_, _) => RefreshLiveValues();
 
         var root = new DockPanel { Margin = new Thickness(24) };
 
@@ -60,7 +69,7 @@ public sealed class BoostsWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Multiplica o valor real da sessão em vez de substituir por um número fixo.",
+            Text = "Mostra o valor atual do jogo e atualiza em tempo real quando um boost é aplicado.",
             Foreground = B("Sub"),
             FontSize = 11,
             Margin = new Thickness(0, 5, 0, 0),
@@ -78,6 +87,7 @@ public sealed class BoostsWindow : Window
         {
             await _boosts.RestoreAllAsync();
             RefreshFactors();
+            await RefreshLiveValuesAsync();
             SetStatus("Boosts restaurados para o baseline desta sessão.", true);
         };
         Grid.SetColumn(restore, 1);
@@ -116,13 +126,19 @@ public sealed class BoostsWindow : Window
         });
 
         Content = root;
-        Loaded += (_, _) =>
+        Loaded += async (_, _) =>
         {
             _svc.StateChanged += OnStateChanged;
             RefreshFactors();
             RefreshConnection();
+            await RefreshLiveValuesAsync();
+            _liveTimer.Start();
         };
-        Closed += (_, _) => _svc.StateChanged -= OnStateChanged;
+        Closed += (_, _) =>
+        {
+            _liveTimer.Stop();
+            _svc.StateChanged -= OnStateChanged;
+        };
     }
 
     private Border BuildPresetsCard()
@@ -150,6 +166,7 @@ public sealed class BoostsWindow : Window
         {
             bool ok = await _boosts.ApplyFarmPresetAsync();
             RefreshFactors();
+            await RefreshLiveValuesAsync();
             SetStatus(ok ? "Preset FARM aplicado." : "Não foi possível aplicar FARM — confirme se o jogo está conectado.", ok);
         };
         row.Children.Add(farm);
@@ -159,6 +176,7 @@ public sealed class BoostsWindow : Window
         {
             bool ok = await _boosts.ApplyBossSafePresetAsync();
             RefreshFactors();
+            await RefreshLiveValuesAsync();
             SetStatus(ok ? "Preset BOSS SAFE aplicado." : "Não foi possível aplicar BOSS SAFE.", ok);
         };
         row.Children.Add(boss);
@@ -168,6 +186,7 @@ public sealed class BoostsWindow : Window
         {
             await _boosts.RestoreAllAsync();
             RefreshFactors();
+            await RefreshLiveValuesAsync();
             SetStatus("Todos os multiplicadores voltaram para x1.", true);
         };
         row.Children.Add(normal);
@@ -200,8 +219,9 @@ public sealed class BoostsWindow : Window
 
     private Border FactorRow(string stat, string description, double[] factors)
     {
-        var grid = BaseFactorGrid(stat, description, out TextBlock current, out StackPanel buttons);
+        var grid = BaseFactorGrid(stat, description, out TextBlock current, out TextBlock values, out StackPanel buttons);
         _factorLabels[stat] = current;
+        _valueLabels[stat] = values;
 
         foreach (double factor in factors)
         {
@@ -215,6 +235,7 @@ public sealed class BoostsWindow : Window
             {
                 bool ok = await _boosts.SetNamedFactorAsync(stat, factor);
                 RefreshFactors();
+                await RefreshLiveValuesAsync();
                 SetStatus(ok ? $"{stat} ajustado para x{factor:0.##}." : $"Falha ao ajustar {stat}.", ok);
             };
             buttons.Children.Add(b);
@@ -224,7 +245,7 @@ public sealed class BoostsWindow : Window
 
     private Border XpFactorRow()
     {
-        var grid = BaseFactorGrid("XP Gain", "StatType 47 · IncreaseExpAmount. Não altera AdditionalExp.", out _xpLabel, out StackPanel buttons);
+        var grid = BaseFactorGrid("XP Gain", "StatType 47 · IncreaseExpAmount. Não altera AdditionalExp.", out _xpLabel, out _xpValueLabel, out StackPanel buttons);
         foreach (double factor in new[] { 1.0, 1.25, 1.5, 2.0 })
         {
             var b = new Button
@@ -237,6 +258,7 @@ public sealed class BoostsWindow : Window
             {
                 bool ok = await _boosts.SetXpFactorAsync(factor);
                 RefreshFactors();
+                await RefreshLiveValuesAsync();
                 SetStatus(ok ? $"XP Gain ajustado para x{factor:0.##}." : "Falha ao resolver o StatType 47 nesta sessão.", ok);
             };
             buttons.Children.Add(b);
@@ -244,7 +266,7 @@ public sealed class BoostsWindow : Window
         return RowBorder(grid);
     }
 
-    private Grid BaseFactorGrid(string title, string description, out TextBlock current, out StackPanel buttons)
+    private Grid BaseFactorGrid(string title, string description, out TextBlock current, out TextBlock values, out StackPanel buttons)
     {
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -264,6 +286,15 @@ public sealed class BoostsWindow : Window
         titleRow.Children.Add(current);
         left.Children.Add(titleRow);
         left.Children.Add(new TextBlock { Text = description, Foreground = B("Subtle"), FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 12, 0) });
+        values = new TextBlock
+        {
+            Text = "Atual: --  ·  Base: --  ·  Alvo: --",
+            Foreground = B("Sub"),
+            FontFamily = (FontFamily)Application.Current.FindResource("Mono"),
+            FontSize = 10,
+            Margin = new Thickness(0, 5, 12, 0),
+        };
+        left.Children.Add(values);
         grid.Children.Add(left);
 
         buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
@@ -295,10 +326,59 @@ public sealed class BoostsWindow : Window
         if (_xpLabel is not null) _xpLabel.Text = $"x{_boosts.XpFactor:0.##}";
     }
 
+    private async void RefreshLiveValues() => await RefreshLiveValuesAsync();
+
+    private async Task RefreshLiveValuesAsync()
+    {
+        if (Interlocked.Exchange(ref _liveRefreshBusy, 1) != 0) return;
+        try
+        {
+            if (!_svc.IsAttached)
+            {
+                foreach (var label in _valueLabels.Values)
+                    label.Text = "Atual: --  ·  Base: --  ·  Alvo: --";
+                if (_xpValueLabel is not null)
+                    _xpValueLabel.Text = "Atual: --  ·  Base: --  ·  Alvo: --";
+                return;
+            }
+
+            var live = await Task.Run(() => _boosts.ReadCurrentValues());
+
+            foreach (var (stat, label) in _valueLabels)
+            {
+                live.Named.TryGetValue(stat, out double currentValue);
+                double? current = live.Named.ContainsKey(stat) ? currentValue : null;
+                var state = _boosts.GetNamedState(stat);
+                double? baseline = state.Baseline ?? current;
+                double? target = state.Target ?? current;
+                label.Text = $"Atual: {Fmt(current)}  ·  Base: {Fmt(baseline)}  ·  Alvo: {Fmt(target)}";
+            }
+
+            if (_xpValueLabel is not null)
+            {
+                var state = _boosts.GetXpState();
+                double? baseline = state.Baseline ?? live.Xp;
+                double? target = state.Target ?? live.Xp;
+                _xpValueLabel.Text = $"Atual: {Fmt(live.Xp)}  ·  Base: {Fmt(baseline)}  ·  Alvo: {Fmt(target)}";
+            }
+        }
+        catch { }
+        finally
+        {
+            Volatile.Write(ref _liveRefreshBusy, 0);
+        }
+    }
+
+    private static string Fmt(double? value)
+        => value is double v && double.IsFinite(v)
+            ? v.ToString("0.###", CultureInfo.CurrentCulture)
+            : "--";
+
     private void OnStateChanged()
     {
         RefreshConnection();
         RefreshFactors();
+        RefreshLiveValues();
     }
 
     private void RefreshConnection()
