@@ -110,8 +110,9 @@
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                         <Border Background="{StaticResource Card2}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,14,0">
-                            <TextBlock x:Name="StatusMini" Style="{StaticResource Sub.Text}" FontFamily="{StaticResource Mono}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="300"/>
+                            <TextBlock x:Name="StatusMini" Style="{StaticResource Sub.Text}" FontFamily="{StaticResource Mono}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="250"/>
                         </Border>
+                        <Button x:Name="UnsafeStatsBtn" Content="UNSAFE: OFF" Padding="12,6" Margin="0,0,8,0" Click="OnUnsafeStats" ToolTip="Desativa temporariamente os limites seguros dos Neural Overrides. Não persiste entre reinicializações."/>
                         <Button x:Name="ResetStatsBtn" Style="{StaticResource Accent.Button}" Content="RESET STATS" Padding="12,6" Margin="0,0,12,0" IsEnabled="False" Click="OnResetStats" ToolTip="Desliga os overrides e restaura os stats capturados no início desta sessão do jogo."/>
                         <Button Style="{StaticResource ChromeButton}" Tag="{StaticResource IcoMin}" Click="OnMinimize"/>
                         <Button Style="{StaticResource ChromeButton}" Tag="{StaticResource IcoClose}" Click="OnClose"/>
