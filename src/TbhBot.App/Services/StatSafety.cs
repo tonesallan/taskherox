@@ -14,6 +14,13 @@ public static class StatSafety
 {
     public readonly record struct Limit(double Min, double Max, string DisplayMax);
 
+    /// <summary>
+    /// Quando true, os limites conservadores por stat ficam desativados.
+    /// O engine continua sujeito aos limites naturais do float e rejeita NaN/Infinity.
+    /// Não é persistido: cada nova execução do TaskHeroX volta ao modo seguro.
+    /// </summary>
+    public static bool UnsafeMode { get; set; }
+
     private static readonly IReadOnlyDictionary<string, Limit> Limits =
         new Dictionary<string, Limit>(StringComparer.Ordinal)
         {
@@ -44,7 +51,15 @@ public static class StatSafety
             ["Skill Heal"] = new(0, 100, "100x"),
         };
 
-    public static bool TryGet(string stat, out Limit limit) => Limits.TryGetValue(stat, out limit);
+    public static bool TryGet(string stat, out Limit limit)
+    {
+        if (UnsafeMode)
+        {
+            limit = default;
+            return false;
+        }
+        return Limits.TryGetValue(stat, out limit);
+    }
 
     public static bool TryValidate(string stat, string raw, out double value, out string error)
     {
@@ -57,6 +72,9 @@ public static class StatSafety
             error = "valor inválido";
             return false;
         }
+
+        if (UnsafeMode)
+            return true;
 
         if (!Limits.TryGetValue(stat, out var limit))
             return true;
@@ -71,7 +89,12 @@ public static class StatSafety
     }
 
     public static string Tooltip(string stat)
-        => Limits.TryGetValue(stat, out var l)
+    {
+        if (UnsafeMode)
+            return "UNSAFE MODE ativo: limites seguros desativados. O engine ainda rejeita NaN/Infinity e valores que não cabem em float finito.";
+
+        return Limits.TryGetValue(stat, out var l)
             ? $"Limite seguro do TaskHeroX: {l.Min.ToString(CultureInfo.InvariantCulture)} até {l.DisplayMax}."
             : "Sem limite específico configurado.";
+    }
 }
