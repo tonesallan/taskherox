@@ -8,6 +8,17 @@ public partial class MainWindow
     private void OnOpenCompatibility(object sender, RoutedEventArgs e)
     {
         var w = new CompatibilityWindow(_svc) { Owner = this };
+
+        // O diagnóstico é secundário e deve caber confortavelmente sem ocupar a tela toda.
+        // Sobrescreve os mínimos maiores definidos na janela e adapta ao WorkArea do Windows.
+        Rect work = SystemParameters.WorkArea;
+        w.MinWidth = Math.Min(620, Math.Max(560, work.Width - 120));
+        w.MinHeight = Math.Min(480, Math.Max(440, work.Height - 120));
+        w.MaxWidth = Math.Max(w.MinWidth, work.Width - 40);
+        w.MaxHeight = Math.Max(w.MinHeight, work.Height - 40);
+        w.Width = Math.Max(w.MinWidth, Math.Min(720, work.Width * 0.72));
+        w.Height = Math.Max(w.MinHeight, Math.Min(600, work.Height * 0.78));
+
         w.ShowDialog();
     }
 
