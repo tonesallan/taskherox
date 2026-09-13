@@ -51,8 +51,6 @@ public sealed class EngineService
         bool last = false;
         while (!ct.IsCancellationRequested)
         {
-            // Esta é a "TICK" do Python: re-attacha sozinho quando o jogo volta — INCLUSIVE durante o
-            // restart (WdHold). O _wd_hold só impede o AutomationLoop de APLICAR no boot, não de attachar.
             bool now = IsAttached;
             if (!now)
             {
@@ -63,8 +61,8 @@ public sealed class EngineService
                 last = now;
                 Post(() => StateChanged?.Invoke());
             }
-            // Jogo atualizou pra um build que este exe não conhece? Tenta baixar os offsets do feed do
-            // repo (JSON de ~13 KB). Uma vez por hash — 404 significa que ainda não publiquei esse build.
+
+            // Build desconhecida: tenta buscar offsets no feed público do TaskHeroX uma vez por hash.
             if (now && !Engine.OffsetsLoaded && Engine.BuildHash is { Length: > 0 } h && _feedTried != h)
             {
                 _feedTried = h;
@@ -75,7 +73,6 @@ public sealed class EngineService
         }
     }
 
-    // Hash já tentado no feed (não fica batendo no GitHub a cada tick de 1s).
     private string? _feedTried;
 
     private async Task FetchOffsetsAsync(string hash, CancellationToken ct)
@@ -85,7 +82,7 @@ public sealed class EngineService
         if (Engine.LoadOffsetsFrom(path)) Post(() => StateChanged?.Invoke());
     }
 
-    /// <summary>Abre o jogo via Steam (steam://run/&lt;appid&gt;). Usado pelo Auto-restart e pelo botão de launcher.</summary>
+    /// <summary>Abre o jogo via Steam (steam://run/&lt;appid&gt;).</summary>
     public void LaunchGame()
     {
         try
@@ -98,16 +95,16 @@ public sealed class EngineService
 
     private void OnLog(string msg) { LogToFile(msg); Post(() => Log?.Invoke(msg)); }
 
-    /// <summary>Roteia um log externo (ex.: overlay) pra barra de status, no thread da UI.</summary>
     public void RaiseLog(string msg) { LogToFile(msg); Post(() => Log?.Invoke(msg)); }
 
-    // Log em arquivo (%APPDATA%/tbh_bot/session.log) — histórico rolável do que aconteceu (watchdog etc.).
+    // Histórico da sessão do TaskHeroX em %APPDATA%/TaskHeroX/session.log.
     private static readonly object _logLock = new();
     private static void LogToFile(string msg)
     {
         try
         {
-            string dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "tbh_bot");
+            string dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TaskHeroX");
             System.IO.Directory.CreateDirectory(dir);
             lock (_logLock)
                 System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "session.log"),
@@ -116,7 +113,6 @@ public sealed class EngineService
         catch { }
     }
 
-    // Sempre marshaliza para o thread da UI (as leituras rodam em background).
     private static void Post(Action a)
     {
         var app = Application.Current;
