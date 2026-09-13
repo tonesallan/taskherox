@@ -1,12 +1,12 @@
-using TbhBot.Core.Game;
+﻿using TbhBot.Core.Game;
 using TbhBot.Core.Il2Cpp;
 using TbhBot.Core.Memory;
 
 namespace TbhBot.Core;
 
 /// <summary>
-/// Fachada de alto nível: attach ao jogo, resolução de offsets por build, cheats, leitura/escrita de save e
-/// o dispatcher main-thread (stub por ora). Os loops (automação/watchdog) leem as flags <c>Want*</c> daqui.
+/// Fachada de alto nÃ­vel: attach ao jogo, resoluÃ§Ã£o de offsets por build, cheats, leitura/escrita de save e
+/// o dispatcher main-thread (stub por ora). Os loops (automaÃ§Ã£o/watchdog) leem as flags <c>Want*</c> daqui.
 /// </summary>
 public sealed class Engine : IDisposable
 {
@@ -31,22 +31,22 @@ public sealed class Engine : IDisposable
 
     public bool IsAttached => Target.IsAttached && Memory is not null;
 
-    /// <summary>Hash do build (md5 dos 2MB do GameAssembly.dll) e se os offsets resolveram — pro status da UI.</summary>
+    /// <summary>Hash do build (md5 dos 2MB do GameAssembly.dll) e se os offsets resolveram â€” pro status da UI.</summary>
     public string? BuildHash { get; private set; }
     public bool OffsetsLoaded { get; private set; }
 
-    // Flags de intenção — o AutomationLoop lê a cada tick.
+    // Flags de intenÃ§Ã£o â€” o AutomationLoop lÃª a cada tick.
     public bool WantActk, WantGodmode, WantAutobox, WantAutostash, WantAutofuse, WantAutoboss, WantEvolve;
     public bool WantWatchdog;   // Auto-restart: jogo fechou? reabre via Steam + reaplica tudo
 
-    /// <summary>Durante o restart: o loop re-attacha mas NÃO aplica nada (start limpo). Igual ao _wd_hold do Python.</summary>
+    /// <summary>Durante o restart: o loop re-attacha mas NÃƒO aplica nada (start limpo). Igual ao _wd_hold do Python.</summary>
     public volatile bool WdHold;
 
-    /// <summary>Steam appid do TaskBarHero — usado pelo Auto-restart pra reabrir (steam://run/&lt;appid&gt;).</summary>
+    /// <summary>Steam appid do TaskBarHero â€” usado pelo Auto-restart pra reabrir (steam://run/&lt;appid&gt;).</summary>
     public const int SteamAppId = 3678970;
 
-    // Stats/stage FORÇADOS (re-aplicados a cada tick — o jogo recalcula e sobrescreve uma escrita única).
-    // O painel troca a referência inteira (assign atômico) p/ não correr com o loop.
+    // Stats/stage FORÃ‡ADOS (re-aplicados a cada tick â€” o jogo recalcula e sobrescreve uma escrita Ãºnica).
+    // O painel troca a referÃªncia inteira (assign atÃ´mico) p/ nÃ£o correr com o loop.
     public Dictionary<string, double> WantStats = new();
     public Dictionary<string, int> WantStage = new();
 
@@ -63,7 +63,7 @@ public sealed class Engine : IDisposable
         BuildHash = hash;
         bool loaded = false;
         if (hash is null)
-            Emit("build-hash indisponível (não consegui ler o GameAssembly.dll do disco)");
+            Emit("build-hash indisponÃ­vel (nÃ£o consegui ler o GameAssembly.dll do disco)");
         else
         {
             loaded = Symbols.LoadKnownBuild(hash);
@@ -76,8 +76,8 @@ public sealed class Engine : IDisposable
                     Path.Combine(AppContext.BaseDirectory, $"offsets_{hash}.json"),
                 })
                 {
-                    // requireVersion: cache em disco de extrator antigo é DESCARTADO (senão um offset
-                    // errado gravado uma vez sobrevive a todas as correções — o cache tem prioridade
+                    // requireVersion: cache em disco de extrator antigo Ã© DESCARTADO (senÃ£o um offset
+                    // errado gravado uma vez sobrevive a todas as correÃ§Ãµes â€” o cache tem prioridade
                     // sobre os embutidos). Ver SymbolTable.MinExtractVer.
                     if (Symbols.LoadOffsetsJson(cand, requireVersion: true))
                     {
@@ -103,19 +103,19 @@ public sealed class Engine : IDisposable
                     }
                 }
             }
-            // A BASE vai no log de propósito: quando o attach pegava a base da sessão anterior, nada
-            // no log denunciava (os offsets carregavam certo, só a base era podre). Com ela impressa,
-            // comparar duas sessões mostra o problema na hora.
+            // A BASE vai no log de propÃ³sito: quando o attach pegava a base da sessÃ£o anterior, nada
+            // no log denunciava (os offsets carregavam certo, sÃ³ a base era podre). Com ela impressa,
+            // comparar duas sessÃµes mostra o problema na hora.
             Emit(loaded
-                ? $"build {hash} — offsets prontos (GameAssembly @ 0x{Target.ModuleBase:X})"
-                : $"build {hash} desconhecido e sem cache — só reads por AOB (stats/stage/god) funcionam; auto-offset por dump = futuro");
+                ? $"build {hash} â€” offsets prontos (GameAssembly @ 0x{Target.ModuleBase:X})"
+                : $"build {hash} desconhecido e sem cache â€” sÃ³ reads por AOB (stats/stage/god) funcionam; auto-offset por dump = futuro");
         }
 
         OffsetsLoaded = loaded;
         Scanner    = new MemoryScanner(Memory);
         Resolver   = new Il2CppResolver(Memory, Symbols, Scanner);
         Cheats     = new Game.Cheats(Memory, Symbols, Scanner);
-        Stats      = new StatEditor(Memory, Scanner);
+        Stats      = new StatEditor(Memory, Scanner, Symbols, Resolver);
         Save       = new SaveData(Memory, Symbols, Resolver);
         var disp   = new Game.RealDispatcher(Memory, Symbols) { Log = Emit };
         Dispatcher = disp;
@@ -130,23 +130,24 @@ public sealed class Engine : IDisposable
         StageAutomation = new StageAutomation(StageNav, Save, AutoBox, Inventory, Symbols)
         {
             Log = Emit,
-            DisableEvolve = () => WantEvolve = false,   // evolução chegou no topo -> desliga o modo sozinha
+            DisableEvolve = () => WantEvolve = false,   // evoluÃ§Ã£o chegou no topo -> desliga o modo sozinha
         };
         return true;
     }
 
     /// <summary>
-    /// Carrega um cache de offsets DEPOIS do attach — usado pelo <see cref="Update.OffsetsFeed"/> quando o
-    /// jogo atualizou e o build ainda não é conhecido por este exe. Cura a sessão em andamento: as features
+    /// Carrega um cache de offsets DEPOIS do attach â€” usado pelo <see cref="Update.OffsetsFeed"/> quando o
+    /// jogo atualizou e o build ainda nÃ£o Ã© conhecido por este exe. Cura a sessÃ£o em andamento: as features
     /// que dependem de RVA voltam sem precisar reiniciar o painel.
     /// </summary>
     public bool LoadOffsetsFrom(string path)
     {
         if (Symbols is null || !Symbols.LoadOffsetsJson(path, requireVersion: true)) return false;
         OffsetsLoaded = true;
-        Emit($"offsets do build {BuildHash} baixados do feed — features completas de volta");
+        Emit($"offsets do build {BuildHash} baixados do feed â€” features completas de volta");
         return true;
     }
 
     public void Dispose() => Target.Dispose();
 }
+
