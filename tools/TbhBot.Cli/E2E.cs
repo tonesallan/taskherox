@@ -117,21 +117,39 @@ internal static class E2E
         Section("CONCORRÊNCIA (Fase 4 — AutomationLoop aplica as flags Want*)");
         {
             var loop = new TbhBot.Core.Automation.AutomationLoop(e);
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             nint a = e.Scanner.FindAob(GameConstants.AobGodmode);
             e.WantGodmode = true;
             var t = loop.RunAsync(cts.Token);
-            await Task.Delay(700);
-            bool applied = a != 0 && First(m.ReadBytes(a, 1)) == 0xC3;
+
+            // Não usa mais um delay fixo de 700 ms. Em máquinas ocupadas ou durante uma troca de wave,
+            // o scheduler pode atrasar o primeiro tick. Polling com timeout testa o comportamento real
+            // sem transformar atraso de scheduling em falso FAIL.
+            bool applied = a != 0 && await WaitForByteAsync(m, a, 0xC3, TimeSpan.FromSeconds(2));
             e.WantGodmode = false;
-            await Task.Delay(700);
-            bool reverted = a != 0 && First(m.ReadBytes(a, 1)) == 0x57;
+            bool reverted = a != 0 && await WaitForByteAsync(m, a, 0x57, TimeSpan.FromSeconds(2));
+
             cts.Cancel();
             try { await t; } catch { /* cancel */ }
             Ok("AutomationLoop aplica/reverte via Want*", applied && reverted, $"aplicou={applied} reverteu={reverted}");
         }
 
         Console.WriteLine($"\n===== RESUMO: {_pass} PASS · {_fail} FAIL =====");
+    }
+
+    private static async Task<bool> WaitForByteAsync(
+        TbhBot.Core.Memory.MemoryAccess memory,
+        nint address,
+        byte expected,
+        TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        while (sw.Elapsed < timeout)
+        {
+            if (First(memory.ReadBytes(address, 1)) == expected) return true;
+            await Task.Delay(50);
+        }
+        return First(memory.ReadBytes(address, 1)) == expected;
     }
 
     private static byte First(byte[] a) => a.Length > 0 ? a[0] : (byte)0;
