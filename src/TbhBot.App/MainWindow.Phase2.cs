@@ -29,6 +29,7 @@ public partial class MainWindow
             "Isto vai:\n" +
             "• desligar ACTk, God Mode e todas as automações;\n" +
             "• parar todos os overrides de stats e stage;\n" +
+            "• restaurar os multiplicadores do Boost Lab, inclusive XP Gain;\n" +
             "• voltar para SAFE MODE;\n" +
             "• restaurar os 25 stats capturados no início desta sessão, se o baseline estiver disponível.\n\n" +
             "Os campos Stage Override deixam de ser forçados, mas o TaskHeroX não reescreve dados de stage antigos porque o estágio atual pode ter mudado.",
@@ -50,6 +51,16 @@ public partial class MainWindow
         engine.WantStats = new Dictionary<string, double>();
         engine.WantStage = new Dictionary<string, int>();
         engine.WdHold = false;
+
+        // O Boost Lab mantém um baseline separado para StatType 47 (XP). Restauramos primeiro;
+        // depois limpamos WantStats novamente para garantir que RESTORE desliga todos os overrides,
+        // inclusive qualquer override anterior que o Boost Lab tenha preservado temporariamente.
+        if (_boostController is not null)
+        {
+            try { await _boostController.RestoreAllAsync(); }
+            catch { }
+            engine.WantStats = new Dictionary<string, double>();
+        }
 
         bool cheatsOk = true;
         if (_svc.IsAttached)
@@ -91,6 +102,6 @@ public partial class MainWindow
         string statResult = hadBaseline
             ? (statsRestored ? "stats restaurados" : "falha ao restaurar stats")
             : "sem baseline de stats";
-        _svc.RaiseLog($"RESTORE SESSION concluído · {statResult} · cheats revertidos={(cheatsOk ? "sim" : "parcial")}");
+        _svc.RaiseLog($"RESTORE SESSION concluído · {statResult} · boosts restaurados · cheats revertidos={(cheatsOk ? "sim" : "parcial")}");
     }
 }
