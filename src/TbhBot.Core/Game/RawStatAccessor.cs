@@ -1,3 +1,4 @@
+using TbhBot.Core.Il2Cpp;
 using TbhBot.Core.Memory;
 
 namespace TbhBot.Core.Game;
