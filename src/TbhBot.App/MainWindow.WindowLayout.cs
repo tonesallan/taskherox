@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using TbhBot.App.Services;
+using TbhBot.App.Views;
 
 namespace TbhBot.App;
 
@@ -11,6 +13,10 @@ namespace TbhBot.App;
 public partial class MainWindow
 {
     private Button? _maximizeButton;
+    private Button? _boostButton;
+    private BoostController? _boostController;
+    private BoostsWindow? _boostWindow;
+    private bool _windowLayoutInitialized;
 
     protected override void OnContentRendered(EventArgs e)
     {
@@ -19,9 +25,22 @@ public partial class MainWindow
         ApplyCompactWindowBounds();
         EnsureMaximizeButton();
 
+        _boostController ??= new BoostController(_svc);
+        EnsureBoostButton();
+
         StateChanged -= OnMainWindowStateChanged;
         StateChanged += OnMainWindowStateChanged;
         UpdateMaximizeButton();
+
+        if (!_windowLayoutInitialized)
+        {
+            _windowLayoutInitialized = true;
+            Closed += (_, _) =>
+            {
+                try { _boostWindow?.Close(); } catch { }
+                _boostController?.Dispose();
+            };
+        }
     }
 
     private void ApplyCompactWindowBounds()
@@ -40,6 +59,48 @@ public partial class MainWindow
 
         Left = work.Left + Math.Max(0, (work.Width - Width) / 2);
         Top = work.Top + Math.Max(0, (work.Height - Height) / 2);
+    }
+
+    private void EnsureBoostButton()
+    {
+        if (_boostButton is not null) return;
+        if (ResetStatsBtn.Parent is not StackPanel chromeBar) return;
+
+        int compatIndex = -1;
+        for (int i = 0; i < chromeBar.Children.Count; i++)
+        {
+            if (chromeBar.Children[i] is Button b && string.Equals(b.Content?.ToString(), "COMPAT", StringComparison.Ordinal))
+            {
+                compatIndex = i;
+                break;
+            }
+        }
+
+        _boostButton = new Button
+        {
+            Content = "BOOSTS",
+            Padding = new Thickness(10, 6, 10, 6),
+            Margin = new Thickness(0, 0, 8, 0),
+            ToolTip = "Abre o Boost Lab: multiplicadores relativos, XP Gain e presets seguros.",
+        };
+        _boostButton.Click += (_, _) => OpenBoostLab();
+
+        chromeBar.Children.Insert(compatIndex >= 0 ? compatIndex : 0, _boostButton);
+    }
+
+    private void OpenBoostLab()
+    {
+        if (_boostController is null) return;
+
+        if (_boostWindow is { IsVisible: true })
+        {
+            _boostWindow.Activate();
+            return;
+        }
+
+        _boostWindow = new BoostsWindow(_svc, _boostController) { Owner = this };
+        _boostWindow.Closed += (_, _) => _boostWindow = null;
+        _boostWindow.Show();
     }
 
     private void EnsureMaximizeButton()
