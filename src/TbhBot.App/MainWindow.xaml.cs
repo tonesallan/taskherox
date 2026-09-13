@@ -20,27 +20,21 @@ public partial class MainWindow : Window
         _svc.StateChanged += UpdateConn;
         _svc.Log += m => StatusMini.Text = m;
 
-        // as 5 views vivem juntas no ContentHost; a nav alterna a Visibility (só uma visível).
-        Register(NavTrainer,   new TrainerView(_svc),   "Control Center");
+        Register(NavTrainer,   new TrainerView(_svc),   "Dashboard");
         Register(NavInventory, new InventoryView(_svc), "Inventory");
-        Register(NavMarket,    new MarketView(_svc),    "Market");
-        Register(NavRunes,     new RunesView(_svc),     "Runes Tree");
-        Register(NavStages,    new StagesView(_svc),    "Stage Map");
+        Register(NavMarket,    new MarketView(_svc),    "Market Intel");
+        Register(NavRunes,     new RunesView(_svc),     "Runes");
+        Register(NavStages,    new StagesView(_svc),    "Stage Navigator");
 
         Show(NavTrainer);
         _svc.Start();
-        // Onde os perfis moram (pasta do exe). Loga também o BaseDirectory: num publish single-file ele
-        // pode ser a pasta temporária de extração — é o que justifica usar ProcessPath pra persistir.
-        _svc.RaiseLog($"perfis: {ProfileStore.ExeDir}  (BaseDirectory={AppContext.BaseDirectory})");
+        _svc.RaiseLog($"TaskHeroX iniciado · perfis: {ProfileStore.ExeDir}");
         UpdateConn();
         Closed += (_, _) => _svc.Stop();
         _ = CheckUpdateAsync();
     }
 
-    // ══════════════════ AUTO-UPDATE DO PAINEL ══════════════════
-    // É o que faz o painel voltar a funcionar sozinho quando O JOGO atualiza: cada release já sai
-    // com os offsets do build novo embutidos, então baixar a versão nova cura tudo — sem exigir
-    // .NET 6 / Il2CppDumper na máquina de quem usa.
+    // ══════════════════ TASKHEROX AUTO-UPDATE ══════════════════
     private readonly AutoUpdate _upd = new();
     private string _updUrl = "", _updTag = "";
     private bool _updBusy;
@@ -53,11 +47,9 @@ public partial class MainWindow : Window
         RefreshBanner();
     }
 
-    /// <summary>Decide a mensagem do banner. UM lugar só — senão o aviso de build novo e o de versão
-    /// nova ficam se sobrescrevendo conforme a ordem em que chegam.</summary>
     private void RefreshBanner()
     {
-        if (_updBusy) return;                                  // download em andamento: não mexe
+        if (_updBusy) return;
         bool unknownBuild = _svc.IsAttached && !_svc.Engine.OffsetsLoaded;
         bool hasUpdate = _updUrl.Length > 0;
         if (!unknownBuild && !hasUpdate) { UpdateBanner.Visibility = Visibility.Collapsed; return; }
@@ -65,16 +57,15 @@ public partial class MainWindow : Window
         string build = _svc.Engine.BuildHash is { Length: >= 7 } h ? h[..7] : "?";
         if (unknownBuild)
         {
-            // Mais urgente: o usuário está vendo features sumirem. Explica o porquê e o que resolve.
-            UpdateTitle.Text = "O jogo atualizou — este painel ainda não conhece esse build";
+            UpdateTitle.Text = "Build do jogo ainda não validada pelo TaskHeroX";
             UpdateDesc.Text = hasUpdate
-                ? $"Baixe a {_updTag}: ela já vem com os offsets do build {build}. Sem isso, só os cheats por AOB funcionam."
-                : $"Build {build} desconhecido. Só os cheats por AOB funcionam até sair uma versão nova do painel.";
+                ? $"A {_updTag} pode incluir offsets para o build {build}. Recursos dependentes de offsets ficam limitados até a validação."
+                : $"Build {build} desconhecido. O TaskHeroX manterá apenas recursos que conseguirem se validar com segurança.";
         }
         else
         {
-            UpdateTitle.Text = $"Nova versão disponível: {_updTag}";
-            UpdateDesc.Text  = $"Você está na v{AutoUpdate.CurrentVersion}. A versão nova já vem com os offsets do build atual do jogo.";
+            UpdateTitle.Text = $"TaskHeroX {_updTag} disponível";
+            UpdateDesc.Text  = $"Versão atual: {AutoUpdate.CurrentVersion}. Atualizações podem incluir compatibilidade com novos builds do jogo.";
         }
         UpdateBtn.Visibility = hasUpdate ? Visibility.Visible : Visibility.Collapsed;
         UpdateBanner.Visibility = Visibility.Visible;
@@ -87,15 +78,15 @@ public partial class MainWindow : Window
         UpdateBtn.IsEnabled = false;
         try
         {
-            var prog = new Progress<double>(p => UpdateBtn.Content = $"BAIXANDO {p * 100:0}%");
+            var prog = new Progress<double>(p => UpdateBtn.Content = $"DOWNLOADING {p * 100:0}%");
             var (newExe, exe, dir) = await _upd.DownloadAndStageAsync(_updUrl, prog);
-            UpdateBtn.Content = "REINICIANDO...";
-            _upd.LaunchUpdater(newExe, exe, dir);   // troca o exe depois que ESTE processo sair
+            UpdateBtn.Content = "RESTARTING...";
+            _upd.LaunchUpdater(newExe, exe, dir);
             Close();
         }
         catch (Exception ex)
         {
-            UpdateBtn.Content = "ATUALIZAR AGORA";
+            UpdateBtn.Content = "UPDATE TASKHEROX";
             UpdateBtn.IsEnabled = true;
             _updBusy = false;
             UpdateDesc.Text = $"Falhou: {ex.Message} — baixe manualmente em github.com/{AutoUpdate.Repo}/releases";
@@ -134,12 +125,12 @@ public partial class MainWindow : Window
         {
             var e = _svc.Engine;
             string build = e.BuildHash is { Length: >= 7 } h ? h[..7] : "?";
-            ConnLabel.Text = "Game Detected";
+            ConnLabel.Text = "GAME DETECTED";
             ConnLabel.Foreground = acc;
             ConnDot.Fill = acc;
             ConnDotGlow.Color = Color.FromRgb(0xFF, 0x7A, 0x18);
-            ConnDetails.Text = $"Build: {build} | Offsets: {(e.OffsetsLoaded ? "OK" : "AOB")}";
-            LaunchBtn.Content = "ENGINE RUNNING";
+            ConnDetails.Text = $"BUILD {build}  ·  OFFSETS {(e.OffsetsLoaded ? "READY" : "AOB ONLY")}";
+            LaunchBtn.Content = "ENGINE ATTACHED";
             LaunchBtn.IsEnabled = false;
         }
         else
@@ -148,8 +139,8 @@ public partial class MainWindow : Window
             ConnLabel.Foreground = red;
             ConnDot.Fill = red;
             ConnDotGlow.Color = Color.FromRgb(0xFF, 0x2A, 0x55);
-            ConnDetails.Text = "Aguardando conexão...";
-            LaunchBtn.Content = "LAUNCH ENGINE";
+            ConnDetails.Text = "Taskbar Hero não detectado";
+            LaunchBtn.Content = "LAUNCH GAME";
             LaunchBtn.IsEnabled = true;
         }
         RefreshBanner();
@@ -157,13 +148,12 @@ public partial class MainWindow : Window
 
     private void OnLaunchGame(object sender, RoutedEventArgs e) => _svc.LaunchGame();
 
-    // ── chrome custom ──
     private void OnMinimize(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void OnClose(object sender, RoutedEventArgs e) => Close();
 
     private void OnHeaderDrag(object sender, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource is DependencyObject d && FindParent<Button>(d) is not null) return;   // não arrasta ao clicar num botão
+        if (e.OriginalSource is DependencyObject d && FindParent<Button>(d) is not null) return;
         if (e.ClickCount == 2)
         {
             WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
