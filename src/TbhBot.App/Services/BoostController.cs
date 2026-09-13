@@ -40,9 +40,54 @@ public sealed class BoostController : IDisposable
         lock (_sync) return _namedFactors.TryGetValue(stat, out double v) ? v : 1.0;
     }
 
+    public (double Factor, double? Baseline, double? Target) GetNamedState(string stat)
+    {
+        lock (_sync)
+        {
+            double factor = _namedFactors.TryGetValue(stat, out double f) ? f : 1.0;
+            double? baseline = _namedBaseline.TryGetValue(stat, out double b) ? b : null;
+            double? target = _namedTargets.TryGetValue(stat, out double t) ? t : null;
+            return (factor, baseline, target);
+        }
+    }
+
     public double XpFactor
     {
         get { lock (_sync) return _xpFactor; }
+    }
+
+    public (double Factor, double? Baseline, double? Target) GetXpState()
+    {
+        lock (_sync)
+        {
+            double? target = _xpBaseline is double baseline
+                ? baseline * _xpFactor
+                : null;
+            return (_xpFactor, _xpBaseline, target);
+        }
+    }
+
+    /// <summary>
+    /// Snapshot de leitura ao vivo usado apenas pela UI do Boost Lab.
+    /// Não altera stats, fatores ou baselines.
+    /// </summary>
+    public (Dictionary<string, double> Named, double? Xp) ReadCurrentValues()
+    {
+        lock (_sync)
+        {
+            if (!EnsureSessionLocked())
+                return (new Dictionary<string, double>(StringComparer.Ordinal), null);
+
+            Dictionary<string, double> named;
+            try { named = _svc.Engine.Stats.ReadStats(); }
+            catch { named = new Dictionary<string, double>(StringComparer.Ordinal); }
+
+            double? xp = null;
+            try { if (_raw is not null) xp = _raw.Read(XpStatType); }
+            catch { }
+
+            return (named, xp);
+        }
     }
 
     public bool HasActiveBoosts
