@@ -21,7 +21,7 @@ if (!e.Attach())
 
 Console.WriteLine("TaskHeroX Evolution Smoke Probe — UM CRUZAMENTO DE BOSS");
 Console.WriteLine($"pid={e.Target.ProcessId} build={e.BuildHash} offsets={e.OffsetsLoaded}");
-Console.WriteLine("O probe navega temporariamente para HELL 3-9, espera a fase limpar, chama Evolution uma vez para cruzar HELL 3-10 e tenta restaurar a fase original no final.");
+Console.WriteLine("O probe usa HELL 3-9 como ponto de partida, espera a fase limpar, chama Evolution uma vez para cruzar HELL 3-10 e tenta restaurar a fase original no final.");
 Console.WriteLine("Se o boss morrer, UMA Hell soulstone pode ser consumida pelo jogo.");
 Console.WriteLine("Ctrl+C solicita cancelamento limpo; o dispatcher é removido e a fase original é restaurada em finally quando possível.");
 
@@ -61,6 +61,7 @@ Dictionary<int, int> Counts()
 }
 
 var original = e.Save.StageProgress();
+var sources = e.Save.StageProgressSources();
 var beforeCounts = Counts();
 int hellBefore = beforeCounts.GetValueOrDefault(HellSoulStone);
 int boxesBefore = e.AutoBox.IuwCount(2) ?? -1;
@@ -68,10 +69,16 @@ int boxesBefore = e.AutoBox.IuwCount(2) ?? -1;
 Console.WriteLine();
 Console.WriteLine("== Pré-condições ==");
 Console.WriteLine($"fase original: max={original.Max} cur={original.Cur} wave={original.Wave}");
+Console.WriteLine($"fontes: runtime cur={sources.RuntimeCur} wave={sources.RuntimeWave} · save cur={sources.SaveCur} wave={sources.SaveWave}");
 Console.WriteLine($"3309: waves={startInfo.Waves} next={startInfo.Next}");
 Console.WriteLine($"3310: type={bossInfo.Type} next={bossInfo.Next} ss={bossInfo.Ss}");
 Console.WriteLine($"Hell soulstone={hellBefore} · ACTBOSS boxes={boxesBefore}");
 
+if (sources.RuntimeCur > 0 && sources.SaveCur > 0 && sources.RuntimeCur != sources.SaveCur)
+{
+    Console.WriteLine("[BLOCKED] runtime/save discordam sobre a fase atual. Reinicie o jogo antes do smoke para partir de um estado consistente.");
+    return;
+}
 if (hellBefore <= 0)
 {
     Console.WriteLine("[BLOCKED] nenhuma Hell soulstone disponível.");
@@ -99,24 +106,30 @@ try
 {
     Console.WriteLine();
     Console.WriteLine("== Preparação ==");
-    if (!e.StageNav.GoToStage(StartStage))
+
+    if (original.Cur != StartStage)
     {
-        Console.WriteLine("[FAIL] não consegui navegar para HELL 3-9.");
-        return;
+        if (!e.StageNav.GoToStage(StartStage))
+        {
+            Console.WriteLine("[FAIL] não consegui solicitar navegação para HELL 3-9.");
+            return;
+        }
+
+        var enterWatch = Stopwatch.StartNew();
+        while (e.Save.StageProgress().Cur != StartStage && enterWatch.ElapsedMilliseconds < 10_000)
+        {
+            if (Volatile.Read(ref keepRunning) == 0 || !e.Target.IsAlive()) return;
+            Thread.Sleep(100);
+        }
+        if (e.Save.StageProgress().Cur != StartStage)
+        {
+            var s = e.Save.StageProgressSources();
+            Console.WriteLine($"[FAIL] navegação para 3309 não confirmou no runtime; runtime={s.RuntimeCur} save={s.SaveCur}.");
+            return;
+        }
     }
 
-    var enterWatch = Stopwatch.StartNew();
-    while (e.Save.StageProgress().Cur != StartStage && enterWatch.ElapsedMilliseconds < 10_000)
-    {
-        if (Volatile.Read(ref keepRunning) == 0 || !e.Target.IsAlive()) return;
-        Thread.Sleep(100);
-    }
-    if (e.Save.StageProgress().Cur != StartStage)
-    {
-        Console.WriteLine($"[FAIL] navegação para 3309 não confirmou; fase atual={e.Save.StageProgress().Cur}.");
-        return;
-    }
-    Console.WriteLine("HELL 3-9 carregado. Aguardando última wave...");
+    Console.WriteLine("HELL 3-9 carregado no runtime. Aguardando última wave...");
 
     var clearWatch = Stopwatch.StartNew();
     while (clearWatch.ElapsedMilliseconds < 180_000)
@@ -125,7 +138,8 @@ try
         var p = e.Save.StageProgress();
         if (p.Cur != StartStage)
         {
-            Console.WriteLine($"[FAIL] saiu de 3309 antes do trigger da Evolution; fase atual={p.Cur}.");
+            var s = e.Save.StageProgressSources();
+            Console.WriteLine($"[FAIL] saiu de 3309 antes do trigger da Evolution; runtime={s.RuntimeCur} save={s.SaveCur}.");
             return;
         }
         if (p.Wave >= startInfo.Waves)
