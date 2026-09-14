@@ -1,33 +1,37 @@
 name: TaskHeroX v0.1.0 Bootstrap Release
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/release-v0.1.0-bootstrap.yml'
+    types:
+      - opened
 
 permissions:
   contents: write
 
 jobs:
   release:
-    if: github.repository == 'tonesallan/taskherox'
+    if: >-
+      github.repository == 'tonesallan/taskherox' &&
+      github.actor == 'tonesallan' &&
+      github.head_ref == 'release/v0.1.0-trigger'
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout validated release commit
         uses: actions/checkout@v4
         with:
+          ref: 93dc08ec6ffbd532eaa3c576839821d94dc3004d
           fetch-depth: 0
 
-      - name: Verify exact main commit
+      - name: Verify release commit belongs to main
         shell: pwsh
         run: |
           git fetch origin main
-          $main = (git rev-parse origin/main).Trim()
-          if ($main -ne $env:GITHUB_SHA) {
-            throw "Bootstrap bloqueado: GITHUB_SHA nao corresponde ao HEAD atual de main."
+          git merge-base --is-ancestor '93dc08ec6ffbd532eaa3c576839821d94dc3004d' 'origin/main'
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Release bloqueado: o commit validado nao pertence a main.'
           }
 
       - name: Setup .NET 10
@@ -81,6 +85,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = 'v0.1.0'
+          $target = '93dc08ec6ffbd532eaa3c576839821d94dc3004d'
           $zipPath = 'dist/TaskHeroX-v0.1.0-win-x64.zip'
           $shaPath = "$zipPath.sha256"
 
@@ -90,7 +95,7 @@ jobs:
           }
           else {
             gh release create $tag $zipPath $shaPath `
-              --target $env:GITHUB_SHA `
+              --target $target `
               --title 'TaskHeroX v0.1.0' `
               --generate-notes
           }
