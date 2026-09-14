@@ -7,6 +7,7 @@ const string ExpectedBuild = "139467f3ad72";
 const long CandidateA = 0x99E5E0;
 
 bool successMode = args.Contains("--success", StringComparer.OrdinalIgnoreCase);
+bool productionRoute = args.Contains("--production-route", StringComparer.OrdinalIgnoreCase);
 int testStage = successMode ? 3310 : 4310;
 int soulStoneKey = successMode ? 190003 : 190004;
 string soulStoneName = successMode ? "Hell" : "Torment";
@@ -24,8 +25,8 @@ if (!e.Attach())
 
 Console.WriteLine("TaskHeroX Stage Entry Semantic Probe — TESTE CONTROLADO");
 Console.WriteLine($"pid={e.Target.ProcessId} build={e.BuildHash} offsets={e.OffsetsLoaded}");
-Console.WriteLine($"modo={(successMode ? "success/type=1" : "missing-soulstone/type=1")} stage={testStage}");
-Console.WriteLine("Este teste executa SOMENTE candidate-A uma vez e restaura o hook do dispatcher em seguida.");
+Console.WriteLine($"modo={(successMode ? "success/type=1" : "missing-soulstone/type=1")} stage={testStage} rota={(productionRoute ? "StageNav.CanEnter" : "candidate-A direto")}");
+Console.WriteLine("Executa uma única validação e restaura o hook do dispatcher em seguida.");
 Console.WriteLine("Não navega, não chama jgd/jgk, não escreve progresso e não consome soulstone por intenção do probe.");
 
 if (!string.Equals(e.BuildHash, ExpectedBuild, StringComparison.OrdinalIgnoreCase))
@@ -46,6 +47,16 @@ if (cache == 0)
 {
     Console.WriteLine($"[BLOCKED] StageCache({testStage}) não foi resolvido.");
     return;
+}
+
+if (productionRoute)
+{
+    Console.WriteLine($"production route ready={e.StageNav.CanValidateType1Entry} split={e.StageNav.UsesSplitType1Validator}");
+    if (!e.StageNav.CanValidateType1Entry || !e.StageNav.UsesSplitType1Validator)
+    {
+        Console.WriteLine("[BLOCKED] a rota de produção type=1 não está marcada como validada nesta sessão.");
+        return;
+    }
 }
 
 Dictionary<int, int> ReadCountsSafe()
@@ -104,8 +115,16 @@ try
 {
     Console.WriteLine();
     Console.WriteLine("== Chamada única ==");
-    result = dispatcher.Call((long)(e.Target.ModuleBase + (nint)CandidateA), cache);
-    Console.WriteLine($"candidate-A({testStage}) => {(result is null ? "null" : result.Value.ToString())}");
+    if (productionRoute)
+    {
+        result = e.StageNav.CanEnter(testStage);
+        Console.WriteLine($"StageNav.CanEnter({testStage}) => {(result is null ? "null" : result.Value.ToString())}");
+    }
+    else
+    {
+        result = dispatcher.Call((long)(e.Target.ModuleBase + (nint)CandidateA), cache);
+        Console.WriteLine($"candidate-A({testStage}) => {(result is null ? "null" : result.Value.ToString())}");
+    }
 }
 finally
 {
@@ -133,5 +152,5 @@ Console.WriteLine($"[{(semanticOk ? "PASS" : "FAIL")}] retorno esperado {expecte
 Console.WriteLine($"[{(resourceUnchanged ? "PASS" : "FAIL")}] soulstone não mudou ({stoneBefore}->{stoneAfter})");
 Console.WriteLine($"[{(stageUnchanged ? "PASS" : "FAIL")}] max/cur não mudaram ({beforeProgress.Max}/{beforeProgress.Cur} -> {afterProgress.Max}/{afterProgress.Cur})");
 Console.WriteLine(semanticOk && resourceUnchanged && stageUnchanged && e.Target.IsAlive()
-    ? $"[PASS] caminho type=1/{expectedName} validado sem efeito de gameplay observado."
+    ? $"[PASS] caminho type=1/{expectedName} validado sem efeito de gameplay observado{(productionRoute ? " pela rota de produção" : "")} ."
     : "[FAIL] não considerar este ramo validado ainda.");
