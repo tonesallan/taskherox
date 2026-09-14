@@ -113,7 +113,7 @@ public sealed class AutoUpdate
     /// versao maior com um ZIP TaskHeroX e o sidecar correspondente .sha256.
     /// Release sem checksum nao e oferecido ao usuario.
     /// </summary>
-    public async Task<(bool Available, string Tag, string Url, string Sha256Url)> CheckAsync(
+    public async Task<(bool Available, string Tag, string Url)> CheckAsync(
         string currentVersion, CancellationToken ct = default)
     {
         try
@@ -127,10 +127,10 @@ public sealed class AutoUpdate
 
             string tag = root.TryGetProperty("tag_name", out var t) ? (t.GetString() ?? "") : "";
             if (CompareVersions(tag, currentVersion) <= 0)
-                return (false, tag, "", "");
+                return (false, tag, "");
 
             if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
-                return (false, tag, "", "");
+                return (false, tag, "");
 
             var found = new List<(string Name, string Url)>();
             foreach (var a in assets.EnumerateArray())
@@ -144,32 +144,31 @@ public sealed class AutoUpdate
                 a.Name.StartsWith("TaskHeroX-", StringComparison.OrdinalIgnoreCase) &&
                 a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrEmpty(zip.Name))
-                return (false, tag, "", "");
+                return (false, tag, "");
 
             string checksumName = zip.Name + ".sha256";
-            var checksum = found.FirstOrDefault(a =>
+            bool hasChecksum = found.Any(a =>
                 a.Name.Equals(checksumName, StringComparison.OrdinalIgnoreCase));
-            if (string.IsNullOrEmpty(checksum.Name))
-                return (false, tag, "", "");
+            if (!hasChecksum)
+                return (false, tag, "");
 
-            return (true, tag, zip.Url, checksum.Url);
+            return (true, tag, zip.Url);
         }
         catch
         {
             // Sem rede / rate-limit / release ausente -> segue sem update.
         }
-        return (false, "", "", "");
+        return (false, "", "");
     }
 
     public async Task<(string NewExe, string Exe, string ExeDir)> DownloadAndStageAsync(
         string url,
-        string sha256Url,
         IProgress<double>? progress = null,
         CancellationToken ct = default)
     {
         string exe = CurrentExePath();
         string exeDir = Path.GetDirectoryName(exe) ?? Directory.GetCurrentDirectory();
-        string expectedSha256 = await DownloadExpectedSha256Async(sha256Url, ct).ConfigureAwait(false);
+        string expectedSha256 = await DownloadExpectedSha256Async(url + ".sha256", ct).ConfigureAwait(false);
 
         using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct)
             .ConfigureAwait(false);
