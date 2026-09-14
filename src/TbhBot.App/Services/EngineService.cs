@@ -1,4 +1,5 @@
 using System.Windows;
+using TbhBot.App.Views;
 using TbhBot.Core;
 using TbhBot.Core.Automation;
 
@@ -82,15 +83,31 @@ public sealed class EngineService
         if (Engine.LoadOffsetsFrom(path)) Post(() => StateChanged?.Invoke());
     }
 
-    /// <summary>Abre o jogo via Steam (steam://run/&lt;appid&gt;).</summary>
+    /// <summary>
+    /// Inicia o jogo como um launcher de desktop: primeiro tenta o caminho salvo/instalação Steam
+    /// descoberta automaticamente; se não localizar, abre o Game Launcher para o usuário escolher
+    /// EXE/atalho ou usar os fallbacks oficiais da Steam.
+    /// </summary>
     public void LaunchGame()
     {
-        try
+        Post(() =>
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                $"steam://run/{Engine.SteamAppId}") { UseShellExecute = true });
-        }
-        catch (Exception ex) { Post(() => Log?.Invoke($"launcher: falha ({ex.Message})")); }
+            if (IsAttached) return;
+
+            var launcher = new GameLauncherService();
+            if (launcher.TryLaunchInstalled(out string msg))
+            {
+                RaiseLog($"launcher: {msg}");
+                return;
+            }
+
+            RaiseLog($"launcher: {msg}");
+            var w = new GameLauncherWindow(launcher)
+            {
+                Owner = Application.Current?.MainWindow,
+            };
+            w.ShowDialog();
+        });
     }
 
     private void OnLog(string msg) { LogToFile(msg); Post(() => Log?.Invoke(msg)); }
