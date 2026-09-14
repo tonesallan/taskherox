@@ -20,6 +20,28 @@ public sealed class StageNav(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
     private readonly RealDispatcher _disp = disp;
     public Action<string>? Log;
 
+    // Build 139467f3ad72: o antigo jgc foi dividido. O candidate-A abaixo foi validado AO VIVO apenas
+    // para STAGETYPE=1: Success(0) e NeedSoulStone(2), sem consumo de soulstone nem mudança de max/cur.
+    // Não reutilizamos a chave ambígua "jgc" e NÃO habilitamos type=2/type=3 por inferência.
+    private const long SplitType1ValidatorRva = 0x99E5E0;
+
+    // Guard de build por tuple de símbolos estruturais. Todos estes valores pertencem à build
+    // 139467f3ad72; se qualquer um mudar, o split validator fica automaticamente indisponível.
+    private bool HasValidatedSplitType1Route =>
+        _sym.Get("uo_ti") == 0x5F4C658 &&
+        _sym.Get("stage_off") == 0x88 &&
+        _sym.Get("jgk") == 0x9A01A0 &&
+        _sym.Get("jgd") == 0x99E9E0;
+
+    /// <summary>
+    /// True quando existe uma rota validada para checar entrada de boss STAGETYPE=1.
+    /// Builds antigas continuam usando jgc; a build 139467f3ad72 usa somente o candidate-A validado.
+    /// </summary>
+    public bool CanValidateType1Entry => _sym.Get("jgc") != 0 || HasValidatedSplitType1Route;
+
+    /// <summary>True somente quando a sessão usa a rota split validada da build 139467f3ad72.</summary>
+    public bool UsesSplitType1Validator => _sym.Get("jgc") == 0 && HasValidatedSplitType1Route;
+
     // A tabela de estágios é estática no jogo -> cacheia depois de ler cheia (>=100 keys, como o Python).
     private Dictionary<int, StageInfo>? _stageTbl;
 
@@ -111,16 +133,26 @@ public sealed class StageNav(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
     }
 
     /// <summary>
-    /// jgc(cache) do próprio jogo: 0=Success, 1=EndStage, 2=NeedSoulStone, 3=NeedChestSpace, 4=Failed.
-    /// Melhor que checar o inventário na mão — o jogo também confere ESPAÇO DE BAÚ. Só lê (main-thread Call).
-    /// null se offsets ausentes / key inexistente.
+    /// Valida se um stage pode ser acessado. Builds antigas usam jgc:
+    /// 0=Success, 1=EndStage, 2=NeedSoulStone, 3=NeedChestSpace, 4=Failed.
+    /// Na build 139467f3ad72 o antigo jgc foi dividido; TaskHeroX usa o candidate-A somente para type=1,
+    /// pois Success(0) e NeedSoulStone(2) foram validados ao vivo sem efeitos de gameplay observados.
+    /// Type=2/type=3 continuam sem rota split exposta. null = rota não validada / key inexistente.
     /// </summary>
     public int? CanEnter(int key)
     {
-        long jgc = _sym.Get("jgc");
         nint c = StageCache(key);
-        if (jgc == 0 || c == 0) return null;
-        return _disp.Call((long)(Base + (nint)jgc), c);
+        if (c == 0) return null;
+
+        long legacyJgc = _sym.Get("jgc");
+        if (legacyJgc != 0)
+            return _disp.Call((long)(Base + (nint)legacyJgc), c);
+
+        if (!HasValidatedSplitType1Route) return null;
+        var table = StageTable();
+        if (!table.TryGetValue(key, out var info) || info.Type != 1) return null;
+
+        return _disp.Call((long)(Base + (nint)SplitType1ValidatorRva), c);
     }
 
     /// <summary>
