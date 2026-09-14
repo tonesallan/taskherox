@@ -52,14 +52,21 @@ var beforeCounts = Counts();
 int hellBefore = beforeCounts.GetValueOrDefault(HellSoulStone);
 int tormentBefore = beforeCounts.GetValueOrDefault(TormentSoulStone);
 var beforeProgress = e.Save.StageProgress();
+var sources = e.Save.StageProgressSources();
 int boxesBefore = e.AutoBox.IuwCount(2) ?? -1;
 
 Console.WriteLine();
 Console.WriteLine("== Pré-condições ==");
 Console.WriteLine($"Hell soulstone={hellBefore} · Torment soulstone={tormentBefore}");
 Console.WriteLine($"progresso: max={beforeProgress.Max} cur={beforeProgress.Cur} wave={beforeProgress.Wave}");
+Console.WriteLine($"fontes: runtime cur={sources.RuntimeCur} wave={sources.RuntimeWave} · save cur={sources.SaveCur} wave={sources.SaveWave}");
 Console.WriteLine($"ACTBOSS boxes={boxesBefore}");
 
+if (sources.RuntimeCur > 0 && sources.SaveCur > 0 && sources.RuntimeCur != sources.SaveCur)
+{
+    Console.WriteLine("[BLOCKED] runtime/save discordam sobre a fase atual. Reinicie o jogo antes do smoke para não testar em estado de transição inconsistente.");
+    return;
+}
 if (tormentBefore != 0)
 {
     Console.WriteLine("[BLOCKED] Torment soulstone precisa estar em 0 para este smoke escolher deterministicamente o boss Hell 3310.");
@@ -130,4 +137,4 @@ Console.WriteLine($"[{(returned ? "PASS" : "FAIL")}] não permaneceu preso no bo
 Console.WriteLine($"[{(boxSane ? "PASS" : "FAIL")}] contagem ACTBOSS não regrediu");
 Console.WriteLine(result && stoneSane && returned && boxSane && e.Target.IsAlive()
     ? "[PASS] AutoBoss one-shot concluiu um ciclo real com a rota type=1 de produção."
-    : "[WARN] ciclo não confirmou kill completo; revisar log antes de liberar a automação.");
+    : "[WARN] ciclo não confirmou kill completo; revisar o log antes de liberar a automação.");
