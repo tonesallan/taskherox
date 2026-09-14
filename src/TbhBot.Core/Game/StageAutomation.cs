@@ -94,8 +94,12 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
     /// <summary>Entra num x-10 e espera o boss morrer (sem voltar pro ponto de partida — a evolução segue em frente).</summary>
     private bool EnterBossWait(int boss, Func<bool> keep)
     {
+        // O contador precisa ser capturado ANTES de EnterBoss. Com dano muito alto o boss pode morrer,
+        // dropar a caixa e o jogo voltar antes do primeiro poll de currentStageKey; se o baseline fosse
+        // tirado só depois da entrada, esse kill instantâneo seria classificado falsamente como "não entrou".
+        int boxesBefore = box.IuwCount(2) ?? 0;
         if (!nav.EnterBoss(boss)) { Emit($"boss: falhou ao entrar em {StageName(boss)}"); return false; }
-        bool? ok = WaitBossDone(boss, 600_000, keep);
+        bool? ok = WaitBossDone(boss, boxesBefore, 600_000, keep);
         Emit($"boss {StageName(boss)}: " + (ok == true ? "✅ morto" : ok is null ? "entrada não pegou" : "party morreu"));
         return ok == true;
     }
@@ -125,9 +129,10 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
     private bool BossRun(int boss, Func<bool> keep)
     {
         int volta = save.StageProgress().Cur;               // de onde vim = pra onde o jogo me devolve
+        int boxesBefore = box.IuwCount(2) ?? 0;             // TEM de ser antes de EnterBoss: kill pode ser instantâneo
         if (!nav.EnterBoss(boss)) { Emit($"boss: falhou ao entrar em {StageName(boss)}"); return false; }
 
-        bool? ok = WaitBossDone(boss, 600_000, keep);
+        bool? ok = WaitBossDone(boss, boxesBefore, 600_000, keep);
         Emit($"boss {StageName(boss)}: " + (ok == true ? "✅ morto (caixa dropou)"
             : ok is null ? "entrada não pegou" : "saiu sem matar (party morreu)"));
 
@@ -146,34 +151,42 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
 
     /// <summary>
     /// Espera o desfecho: True (boss morto = caixa ACTBOSS apareceu), False (saiu sem caixa = party morreu),
-    /// null (a entrada nem pegou). Duas fases; a 1ª (confirmar que a entrada pegou) é obrigatória senão
-    /// "fase != boss" é verdade no instante 0 e dá falso-positivo imediato.
+    /// null (a entrada nem pegou). O baseline de caixas é capturado ANTES de EnterBoss, então um boss que
+    /// morre rápido demais para currentStageKey ser observado ainda é reconhecido pelo drop ACTBOSS.
     /// </summary>
-    private bool? WaitBossDone(int boss, int timeoutMs, Func<bool> keep)
+    private bool? WaitBossDone(int boss, int boxesBefore, int timeoutMs, Func<bool> keep)
     {
         int Cur() => save.StageProgress().Cur;
+        bool BoxDropped()
+        {
+            int? b = box.IuwCount(2);
+            return b is int bv && bv > boxesBefore;
+        }
 
         var sw = Stopwatch.StartNew();
         while (Cur() != boss)                               // 1) a entrada pegou?
         {
+            // Kill instantâneo: entrou, matou, dropou e voltou entre dois polls de stage.
+            if (BoxDropped())
+            {
+                Emit("auto-boss: kill instantâneo confirmado pelo drop ACTBOSS antes do primeiro poll de estágio");
+                return true;
+            }
             if (sw.ElapsedMilliseconds > 8_000) { Emit($"auto-boss: a entrada não pegou (fase={Cur()})"); return null; }
             if (!keep()) return null;
             Thread.Sleep(300);
         }
 
-        int b0 = box.IuwCount(2) ?? 0;                      // caixas ACTBOSS antes da luta
         sw.Restart();
         while (sw.ElapsedMilliseconds < timeoutMs)          // 2) desfecho
         {
             Thread.Sleep(1000);
             if (!keep()) return false;
-            int? b = box.IuwCount(2);
-            if (b is int bv && bv > b0) return true;         // caixa do boss caiu = MATOU
-            if (Cur() != boss)                               // saiu sem caixa = party morreu
+            if (BoxDropped()) return true;                  // caixa do boss caiu = MATOU
+            if (Cur() != boss)                              // saiu sem caixa = party morreu
             {
                 Thread.Sleep(1000);
-                b = box.IuwCount(2);
-                return b is int bv2 && bv2 > b0;
+                return BoxDropped();
             }
         }
         return false;
