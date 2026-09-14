@@ -2,54 +2,106 @@
 
 ## Status
 
-`AutoBoss` and `Evolution` remain intentionally blocked at engine level. The old single `jgc(StageCache)` route no longer has a validated one-to-one replacement in build `139467f3ad72`.
+The old single `jgc(StageCache)` route split in build `139467f3ad72`.
+
+For the scope actually used by TaskHeroX, candidate A (RVA `0x99E5E0`) has now been validated live for `STAGETYPE=1` on the current build:
+
+- `Success(0)` confirmed on stage `3310` with available Hell soulstones and free capacity;
+- `NeedSoulStone(2)` confirmed twice on stage `4310` with zero Torment soulstones;
+- tested calls did not consume soulstones;
+- tested calls did not change `maxCompletedStage` or `currentStageKey`;
+- the game process remained alive;
+- the dispatcher hook was removed/restored after every controlled call.
+
+TaskHeroX therefore exposes this route only as a typed type-1 validator. It does **not** restore candidate A under the ambiguous legacy `jgc` name.
+
+Candidate B (RVA `0x99E750`) / type `2` remains unresolved and is not exposed by this work. Type `3` is also not enabled by inference.
 
 ## Recovered candidates
 
 Reverse engineering of the current build found two genuine stage-entry validation methods called from the same stage flow:
 
-- candidate A — RVA `0x99E5E0`: currently associated with stage-type branches 1/3 and capacity-like conditions.
-- candidate B — RVA `0x99E750`: currently associated with stage-type 2 and nested resource/state conditions.
+- candidate A — RVA `0x99E5E0`: associated with stage-type branches 1/3 and resource/capacity conditions;
+- candidate B — RVA `0x99E750`: associated with stage type 2 and nested resource/state conditions.
 
-These observations are hypotheses from decompilation, not yet a safe runtime contract. Neither candidate must be assigned to the legacy `jgc` symbol until the return semantics are proven for the stage types actually used by TaskHeroX.
+Only candidate A / `STAGETYPE=1` has the runtime contract required by current AutoBoss/Evolution.
 
-## Live read-only observation — 2026-09-14
+## Live observations — 2026-09-14
 
-Probe result on the validated game build:
+Validated game build:
 
-- PID `20096`
-- build `139467f3ad72`
-- offsets loaded: `true`
-- current progress: max `4310`, current `4309`, wave `0`
-- live stage table: `189` entries
-- type counts:
-  - type `0`: `108`
-  - type `1`: `12`
-  - type `2`: `60`
-  - type `3`: `9`
-- `3310`: type `1`, next `4101`, soulstone `190003`
-- `4310`: type `1`, next `0`, soulstone `190004`
-- current `4309`: type `0`, next `4310`
-- both candidate RVAs contain live executable code at the expected addresses.
+- PID `20096` during the test session;
+- build `139467f3ad72`;
+- offsets loaded: `true`;
+- live stage table: `189` entries;
+- type `0`: `108`;
+- type `1`: `12`;
+- type `2`: `60`;
+- type `3`: `9`;
+- `3310`: type `1`, next `4101`, soulstone `190003`;
+- `4310`: type `1`, next `0`, soulstone `190004`;
+- current `4309`: type `0`, next `4310`.
 
-### Scope reduction
+### Controlled semantic tests
 
-The current TaskHeroX implementation does not need a generic replacement for every old `jgc` use before AutoBoss/Evolution can be reconsidered:
+Missing-resource branch:
 
-- `AutoBoss` only targets `3310` and `4310`, both confirmed type `1`.
-- `Evolution` calls `CanEnter` only when the next stage is type `1`; normal type `0` movement uses `GoToStage` directly.
-- Therefore candidate B / type `2` is **not a prerequisite** for reactivating only AutoBoss/Evolution.
-- The immediate blocker is proving candidate A as the correct, side-effect-free type `1` validator with stable return semantics.
+```text
+4310 / type=1 / Torment stone 190004 = 0
+candidate-A(4310) => 2
+stone: 0 -> 0
+max/cur: 4310/4309 -> 4310/4309
+```
 
-This does **not** justify enabling the features yet.
+This result was reproduced twice.
 
-## Safety rule
+Success branch:
 
-Do not pick candidate A or B arbitrarily. Do not enable AutoBoss/Evolution merely because one candidate returns a plausible value for one stage. The current `AutomationLoop` block is the expected behavior while the type `1` validator is unresolved.
+```text
+3310 / type=1 / Hell stone 190003 = 16
+inventory free = 76
+stash free = 244
+candidate-A(3310) => 0
+stone: 16 -> 16
+max/cur: 4310/4309 -> 4310/4309
+```
 
-## Read-only probe
+`currentStageWave` changed during one success run. Wave is live combat state and advances asynchronously while the game continues running, so it is recorded but is not used as the invariant for the validator. No persistent stage progression field used by the gate changed.
 
-Normal run:
+## Why type 1 is enough for this phase
+
+The current TaskHeroX implementation does not need a generic replacement for every old `jgc` use:
+
+- `AutoBoss` targets `3310` and `4310`, both type `1`;
+- `Evolution` calls `CanEnter` only when the next stage is type `1`;
+- normal type `0` movement uses `GoToStage` directly;
+- candidate B / type `2` is therefore not required to recover current AutoBoss/Evolution.
+
+## Production route
+
+`StageNav.CanEnter(key)` now follows these rules:
+
+1. If a legacy build has a validated `jgc`, keep using it.
+2. If the exact structural-symbol tuple for build `139467f3ad72` is present, the split route is available.
+3. The split route calls RVA `0x99E5E0` only when the target stage is `STAGETYPE=1`.
+4. Type `2` and type `3` return no split validation route.
+
+`AutomationLoop` now gates AutoBoss/Evolution on the typed type-1 capability rather than on the presence of legacy `jgc`.
+
+The Compatibility Center reports this explicitly as a validated split type-1 route.
+
+## Safety rules kept after unblocking
+
+- Do not assign candidate A or B back to `jgc`.
+- Do not expose candidate B/type `2` until independently validated.
+- Do not expose type `3` merely because candidate A's decompilation contains a type-3 branch.
+- Unknown builds remain blocked unless they have a separately validated route.
+- Existing `jgd + jgk` boss-entry behavior is unchanged.
+- Game Speed is outside this work.
+
+## Diagnostic probes
+
+Read-only probe:
 
 ```powershell
 dotnet run --project tools\TaskHeroX.StageEntryProbe
@@ -61,30 +113,29 @@ Deep code dump:
 dotnet run --project tools\TaskHeroX.StageEntryProbe -- --code-dump
 ```
 
-The probe:
+Direct semantic probe:
 
-- attaches to the live game;
-- refuses any build other than `139467f3ad72`;
-- reads candidate method bytes only;
-- optionally reads 768 bytes of each candidate for offline disassembly;
-- reads current stage progress;
-- groups the live stage table by `STAGETYPE`;
-- prints representative `StageCache` pointers and metadata;
-- prints soulstone and inventory/stash snapshots using existing read-only readers;
-- does **not** call either candidate;
-- does **not** navigate stages, write progress, consume soulstones, or patch memory.
+```powershell
+dotnet run --project tools\TaskHeroX.StageEntrySemanticProbe
 
-## Unblock criteria for AutoBoss/Evolution
+dotnet run --project tools\TaskHeroX.StageEntrySemanticProbe -- --success
+```
 
-Before the engine-level block can be removed for these two features, all of the following must be established:
+Production-route semantic probe:
 
-1. candidate A is confirmed as the type `1` validation route.
-2. Return enum semantics for success/soulstone/capacity/failure are confirmed for type `1`.
-3. Validation itself is proven not to reserve, consume, navigate, or mutate persistent stage/account state.
-4. Controlled runtime observations match independently readable state.
-5. Existing `jgd + jgk` boss-entry path remains unchanged unless separate evidence proves otherwise.
-6. E2E remains green and AutoBoss/Evolution stay blocked on unknown builds.
+```powershell
+dotnet run --project tools\TaskHeroX.StageEntrySemanticProbe -- --production-route
+
+dotnet run --project tools\TaskHeroX.StageEntrySemanticProbe -- --success --production-route
+```
+
+The semantic probe still refuses the wrong build, checks type/resource/capacity preconditions, calls only the validator once, removes the dispatcher hook in `finally`, and compares resource plus max/cur state before/after.
+
+## Remaining validation before merge
+
+1. CI build/test green on the final PR head.
+2. Local build/test green.
+3. Production-route semantic probe returns the same `NeedSoulStone(2)` / `Success(0)` results.
+4. Final controlled AutoBoss/Evolution smoke test confirms the existing automation path operates correctly with the typed validator.
 
 Candidate B/type `2` can remain unresolved in this phase because current AutoBoss/Evolution do not use it.
-
-Only after these conditions are met should TaskHeroX expose a typed stage-entry validator such as `CanEnterActBoss` instead of restoring the ambiguous legacy name `jgc`.
