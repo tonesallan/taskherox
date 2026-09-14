@@ -1,1 +1,2 @@
 Controlled one-shot trigger for the TaskHeroX v0.1.0 bootstrap release.
+Retry after fixing win-x64 runtime restore in the release publish step.
