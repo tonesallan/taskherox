@@ -8,6 +8,7 @@ const long CandidateB = 0x99E750; // decomp: rota que parece cobrir tipo 2 + che
 
 bool deepCodeDump = args.Contains("--code-dump", StringComparer.OrdinalIgnoreCase);
 bool calleeDump = args.Contains("--callee-dump", StringComparer.OrdinalIgnoreCase);
+bool navDump = args.Contains("--nav-dump", StringComparer.OrdinalIgnoreCase);
 
 var e = new Engine();
 if (!e.Attach())
@@ -74,6 +75,40 @@ if (calleeDump)
     Console.WriteLine("NOTA: nenhum desses métodos é chamado pelo probe; esta seção é leitura de código para análise offline.");
 }
 
+if (navDump)
+{
+    Console.WriteLine();
+    Console.WriteLine("== Navegação atual — SOMENTE CÓDIGO ==");
+    Console.WriteLine("Lê 1024 bytes de jgd/jgk/jgq para investigar a entrada intermitente. Nenhuma função é chamada.");
+    DumpCode("jgd / boss setup", 0x99E9E0, 1024);
+    DumpCode("jgk / stage navigation", 0x9A01A0, 1024);
+    DumpCode("jgq / unlocked check", 0x9A0E50, 1024);
+
+    Console.WriteLine();
+    Console.WriteLine("== CommonSaveData — SOMENTE LEITURA ==");
+    try
+    {
+        nint psd = e.Resolver.ResolvePsd();
+        nint common = psd != 0 ? e.Memory.ReadPtr(psd + 0x10) : 0;
+        if (common == 0)
+        {
+            Console.WriteLine("CommonSaveData: não resolvido");
+        }
+        else
+        {
+            Console.WriteLine($"maxCompletedStage={e.Memory.ReadI32(common + 0x5C)}");
+            Console.WriteLine($"lastClearedStageKey={e.Memory.ReadI32(common + 0x60)}");
+            Console.WriteLine($"currentStageKey(save)={e.Memory.ReadI32(common + 0x64)}");
+            Console.WriteLine($"currentStageWave(save)={e.Memory.ReadI32(common + 0x68)}");
+            Console.WriteLine($"prevNormalStageKey={e.Memory.ReadI32(common + 0x6C)}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"CommonSaveData: [FAIL] {ex.GetType().Name}: {ex.Message}");
+    }
+}
+
 Console.WriteLine();
 Console.WriteLine("== Progresso atual ==");
 var (mx, cur, wave) = e.Save.StageProgress();
@@ -96,7 +131,7 @@ foreach (var group in table.OrderBy(kv => kv.Key).GroupBy(kv => kv.Value.Type).O
 
 Console.WriteLine();
 Console.WriteLine("== Stages relevantes ==");
-foreach (var key in new[] { cur, 3310, 4310 })
+foreach (var key in new[] { cur, 3309, 3310, 4101, 4309, 4310 }.Distinct())
 {
     if (key <= 0) continue;
     if (!table.TryGetValue(key, out var info))
@@ -115,7 +150,7 @@ int[] autoBossKeys = [3310, 4310];
 bool autoBossAllType1 = autoBossKeys.All(k => table.TryGetValue(k, out var info) && info.Type == 1);
 Console.WriteLine($"AutoBoss: 3310/4310 são type=1? {autoBossAllType1}");
 Console.WriteLine("Evolution: a validação CanEnter só é usada quando o PRÓXIMO stage é type=1; stages normais type=0 seguem por GoToStage.");
-Console.WriteLine("Conclusão de escopo: candidate-B/type=2 não é requisito para reativar apenas AutoBoss/Evolution; candidate-A/type=1 é o foco.");
+Console.WriteLine("Conclusão de escopo: candidate-B/type=2 não é requisito para AutoBoss/Evolution; a confiabilidade de jgd/jgk ainda está em revisão.");
 
 Console.WriteLine();
 Console.WriteLine("== Snapshot somente leitura de recursos ==");
@@ -143,7 +178,8 @@ catch (Exception ex)
 }
 
 Console.WriteLine();
-Console.WriteLine("== Estado do bloqueio ==");
+Console.WriteLine("== Estado da rota ==");
 Console.WriteLine($"jgc resolvido? {e.Symbols.Has("jgc")}");
-Console.WriteLine("AutoBoss/Evolution DEVEM permanecer bloqueados até candidate-A ter semântica e ausência de efeitos colaterais comprovadas para type=1.");
+Console.WriteLine($"type1 ready={e.StageNav.CanValidateType1Entry} split={e.StageNav.UsesSplitType1Validator}");
+Console.WriteLine("PR permanece em draft até a navegação jgd/jgk ficar confiável nos smokes de AutoBoss/Evolution.");
 Console.WriteLine($"jogo vivo={e.Target.IsAlive()}");
