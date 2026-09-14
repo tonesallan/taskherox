@@ -5,8 +5,13 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 const string ExpectedBuild = "139467f3ad72";
 const long CandidateA = 0x99E5E0;
-const int TestStage = 4310;
-const int TormentSoulStone = 190004;
+
+bool successMode = args.Contains("--success", StringComparer.OrdinalIgnoreCase);
+int testStage = successMode ? 3310 : 4310;
+int soulStoneKey = successMode ? 190003 : 190004;
+string soulStoneName = successMode ? "Hell" : "Torment";
+int expectedResult = successMode ? 0 : 2;
+string expectedName = successMode ? "Success" : "NeedSoulStone";
 
 var e = new Engine();
 e.Log += m => Console.WriteLine("  [engine] " + m);
@@ -19,7 +24,8 @@ if (!e.Attach())
 
 Console.WriteLine("TaskHeroX Stage Entry Semantic Probe — TESTE CONTROLADO");
 Console.WriteLine($"pid={e.Target.ProcessId} build={e.BuildHash} offsets={e.OffsetsLoaded}");
-Console.WriteLine("Este teste executa SOMENTE candidate-A para o stage 4310 e restaura o hook do dispatcher em seguida.");
+Console.WriteLine($"modo={(successMode ? "success/type=1" : "missing-soulstone/type=1")} stage={testStage}");
+Console.WriteLine("Este teste executa SOMENTE candidate-A uma vez e restaura o hook do dispatcher em seguida.");
 Console.WriteLine("Não navega, não chama jgd/jgk, não escreve progresso e não consome soulstone por intenção do probe.");
 
 if (!string.Equals(e.BuildHash, ExpectedBuild, StringComparison.OrdinalIgnoreCase))
@@ -29,16 +35,16 @@ if (!string.Equals(e.BuildHash, ExpectedBuild, StringComparison.OrdinalIgnoreCas
 }
 
 var table = e.StageNav.StageTable();
-if (!table.TryGetValue(TestStage, out var info) || info.Type != 1)
+if (!table.TryGetValue(testStage, out var info) || info.Type != 1)
 {
-    Console.WriteLine("[BLOCKED] stage 4310 não é type=1 nesta sessão.");
+    Console.WriteLine($"[BLOCKED] stage {testStage} não é type=1 nesta sessão.");
     return;
 }
 
-nint cache = e.StageNav.StageCache(TestStage);
+nint cache = e.StageNav.StageCache(testStage);
 if (cache == 0)
 {
-    Console.WriteLine("[BLOCKED] StageCache(4310) não foi resolvido.");
+    Console.WriteLine($"[BLOCKED] StageCache({testStage}) não foi resolvido.");
     return;
 }
 
@@ -49,19 +55,42 @@ Dictionary<int, int> ReadCountsSafe()
 }
 
 var beforeCounts = ReadCountsSafe();
-int tormentBefore = beforeCounts.GetValueOrDefault(TormentSoulStone);
+int stoneBefore = beforeCounts.GetValueOrDefault(soulStoneKey);
 var beforeProgress = e.Save.StageProgress();
+int invFreeBefore = -1;
+int stashFreeBefore = -1;
+try
+{
+    invFreeBefore = e.AutoStash.InvFree();
+    (_, stashFreeBefore) = e.AutoStash.SlotCounts();
+}
+catch { }
 
 Console.WriteLine();
 Console.WriteLine("== Pré-condições ==");
-Console.WriteLine($"4310: type={info.Type} ss={info.Ss} cache=0x{(long)cache:X}");
-Console.WriteLine($"Torment soulstone antes = {tormentBefore}");
+Console.WriteLine($"{testStage}: type={info.Type} ss={info.Ss} cache=0x{(long)cache:X}");
+Console.WriteLine($"{soulStoneName} soulstone antes = {stoneBefore}");
+Console.WriteLine($"inventário livre={invFreeBefore} baú livre={stashFreeBefore}");
 Console.WriteLine($"progresso antes: max={beforeProgress.Max} cur={beforeProgress.Cur} wave={beforeProgress.Wave}");
 
-if (tormentBefore != 0)
+if (!successMode && stoneBefore != 0)
 {
-    Console.WriteLine("[BLOCKED] este teste foi desenhado apenas para o caminho 'falta soulstone'. Como a conta tem Torment soulstone, nenhuma função será chamada.");
+    Console.WriteLine("[BLOCKED] o teste NeedSoulStone exige contagem zero. Nenhuma função será chamada.");
     return;
+}
+
+if (successMode)
+{
+    if (stoneBefore <= 0)
+    {
+        Console.WriteLine("[BLOCKED] o teste Success exige pelo menos uma Hell soulstone. Nenhuma função será chamada.");
+        return;
+    }
+    if (stashFreeBefore == 0 || invFreeBefore == 0)
+    {
+        Console.WriteLine("[BLOCKED] sem capacidade livre observável; não testar o ramo Success nesta condição.");
+        return;
+    }
 }
 
 if (e.Dispatcher is not RealDispatcher dispatcher)
@@ -76,7 +105,7 @@ try
     Console.WriteLine();
     Console.WriteLine("== Chamada única ==");
     result = dispatcher.Call((long)(e.Target.ModuleBase + (nint)CandidateA), cache);
-    Console.WriteLine($"candidate-A(4310) => {(result is null ? "null" : result.Value.ToString())}");
+    Console.WriteLine($"candidate-A({testStage}) => {(result is null ? "null" : result.Value.ToString())}");
 }
 finally
 {
@@ -86,23 +115,23 @@ finally
 
 Thread.Sleep(150);
 var afterCounts = ReadCountsSafe();
-int tormentAfter = afterCounts.GetValueOrDefault(TormentSoulStone);
+int stoneAfter = afterCounts.GetValueOrDefault(soulStoneKey);
 var afterProgress = e.Save.StageProgress();
 
 Console.WriteLine();
 Console.WriteLine("== Pós-condições ==");
-Console.WriteLine($"Torment soulstone depois = {tormentAfter}");
+Console.WriteLine($"{soulStoneName} soulstone depois = {stoneAfter}");
 Console.WriteLine($"progresso depois: max={afterProgress.Max} cur={afterProgress.Cur} wave={afterProgress.Wave}");
 Console.WriteLine($"jogo vivo={e.Target.IsAlive()}");
 
-bool resourceUnchanged = tormentAfter == tormentBefore;
+bool resourceUnchanged = stoneAfter == stoneBefore;
 bool stageUnchanged = afterProgress.Max == beforeProgress.Max && afterProgress.Cur == beforeProgress.Cur;
-bool semanticOk = result == 2;
+bool semanticOk = result == expectedResult;
 
 Console.WriteLine();
-Console.WriteLine($"[{(semanticOk ? "PASS" : "FAIL")}] retorno esperado NeedSoulStone(2)");
-Console.WriteLine($"[{(resourceUnchanged ? "PASS" : "FAIL")}] soulstone não mudou ({tormentBefore}->{tormentAfter})");
+Console.WriteLine($"[{(semanticOk ? "PASS" : "FAIL")}] retorno esperado {expectedName}({expectedResult})");
+Console.WriteLine($"[{(resourceUnchanged ? "PASS" : "FAIL")}] soulstone não mudou ({stoneBefore}->{stoneAfter})");
 Console.WriteLine($"[{(stageUnchanged ? "PASS" : "FAIL")}] max/cur não mudaram ({beforeProgress.Max}/{beforeProgress.Cur} -> {afterProgress.Max}/{afterProgress.Cur})");
 Console.WriteLine(semanticOk && resourceUnchanged && stageUnchanged && e.Target.IsAlive()
-    ? "[PASS] caminho type=1/falta-soulstone validado sem efeito de gameplay observado."
-    : "[FAIL] não considerar candidate-A validado ainda.");
+    ? $"[PASS] caminho type=1/{expectedName} validado sem efeito de gameplay observado."
+    : "[FAIL] não considerar este ramo validado ainda.");
