@@ -76,11 +76,11 @@ if (beforeProgress.Cur == HellBoss)
     return;
 }
 
-volatile bool keepRunning = true;
+int keepRunning = 1;
 Console.CancelKeyPress += (_, ev) =>
 {
     ev.Cancel = true;
-    keepRunning = false;
+    Interlocked.Exchange(ref keepRunning, 0);
     Console.WriteLine("\n[cancel] encerrando o smoke de forma limpa...");
 };
 
@@ -89,7 +89,7 @@ try
 {
     Console.WriteLine();
     Console.WriteLine("== AutoBoss one-shot ==");
-    result = e.StageAutomation.AutoBoss(() => keepRunning && e.Target.IsAlive());
+    result = e.StageAutomation.AutoBoss(() => Volatile.Read(ref keepRunning) == 1 && e.Target.IsAlive());
     Console.WriteLine($"StageAutomation.AutoBoss => {result}");
 }
 finally
@@ -114,7 +114,7 @@ Console.WriteLine($"progresso: max={afterProgress.Max} cur={afterProgress.Cur} w
 Console.WriteLine($"ACTBOSS boxes: {boxesBefore} -> {boxesAfter}");
 Console.WriteLine($"jogo vivo={e.Target.IsAlive()}");
 
-if (!keepRunning)
+if (Volatile.Read(ref keepRunning) == 0)
 {
     Console.WriteLine("[CANCELLED] teste interrompido pelo usuário; não usar como validação final.");
     return;
