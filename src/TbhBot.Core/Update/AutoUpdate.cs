@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace TbhBot.Core.Update;
@@ -8,16 +9,17 @@ namespace TbhBot.Core.Update;
 /// <summary>
 /// Auto-update via GitHub Releases.
 ///
-/// Cada release TaskHeroX pode carregar os offsets do build novo embutidos
-/// (Offsets/offsets_&lt;hash&gt;.json), permitindo restaurar compatibilidade sem
-/// exigir ferramentas de desenvolvimento na maquina do usuario.
+/// Releases oficiais precisam publicar o ZIP e um sidecar <c>.sha256</c> com o
+/// mesmo nome. O ZIP so e aberto depois que o SHA-256 baixado do release foi
+/// validado, evitando executar um pacote corrompido ou alterado em transito.
 /// </summary>
 public sealed class AutoUpdate
 {
     public const string Repo = "tonesallan/taskherox";
 
     /// <summary>
-    /// Versao deste build. Vem do assembly (&lt;Version&gt; do Directory.Build.props).
+    /// Versao deste build. Vem do assembly (&lt;Version&gt; do Directory.Build.props)
+    /// ou da versao injetada pelo workflow de release.
     /// </summary>
     public static readonly string CurrentVersion = ResolveVersion();
 
@@ -35,6 +37,8 @@ public sealed class AutoUpdate
     }
 
     private const string UserAgent = "TaskHeroX-updater";
+    private const long MaxUpdateZipBytes = 512L * 1024 * 1024;
+    private const int MaxChecksumTextBytes = 16 * 1024;
 
     private static readonly HttpClient Http = CreateClient();
 
@@ -74,8 +78,40 @@ public sealed class AutoUpdate
     }
 
     /// <summary>
-    /// Consulta releases/latest do TaskHeroX. Retorna Available=true somente
-    /// quando existe versao maior e um asset .zip publicavel.
+    /// Aceita o formato padrao de checksum (<c>hash  arquivo.zip</c>) ou apenas
+    /// os 64 caracteres hexadecimais. Outros formatos sao rejeitados.
+    /// </summary>
+    public static bool TryParseSha256(string? text, out string sha256)
+    {
+        sha256 = string.Empty;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        string first = text.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault() ?? string.Empty;
+        if (first.Length != 64 || first.Any(c => !Uri.IsHexDigit(c))) return false;
+
+        sha256 = first.ToLowerInvariant();
+        return true;
+    }
+
+    /// <summary>
+    /// Utilitario testavel para a mesma validacao criptografica usada no updater.
+    /// </summary>
+    public static bool Sha256Matches(ReadOnlySpan<byte> data, string expectedSha256)
+    {
+        if (!TryParseSha256(expectedSha256, out string normalized)) return false;
+        byte[] expected;
+        try { expected = Convert.FromHexString(normalized); }
+        catch { return false; }
+
+        byte[] actual = SHA256.HashData(data);
+        return CryptographicOperations.FixedTimeEquals(actual, expected);
+    }
+
+    /// <summary>
+    /// Consulta releases/latest do TaskHeroX. Available=true somente quando existe
+    /// versao maior com um ZIP TaskHeroX e o sidecar correspondente .sha256.
+    /// Release sem checksum nao e oferecido ao usuario.
     /// </summary>
     public async Task<(bool Available, string Tag, string Url)> CheckAsync(
         string currentVersion, CancellationToken ct = default)
@@ -93,18 +129,30 @@ public sealed class AutoUpdate
             if (CompareVersions(tag, currentVersion) <= 0)
                 return (false, tag, "");
 
-            if (root.TryGetProperty("assets", out var assets) &&
-                assets.ValueKind == JsonValueKind.Array)
+            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+                return (false, tag, "");
+
+            var found = new List<(string Name, string Url)>();
+            foreach (var a in assets.EnumerateArray())
             {
-                foreach (var a in assets.EnumerateArray())
-                {
-                    var name = a.TryGetProperty("name", out var n) ? (n.GetString() ?? "") : "";
-                    if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
-                    var dl = a.TryGetProperty("browser_download_url", out var b) ? (b.GetString() ?? "") : "";
-                    if (dl.Length > 0)
-                        return (true, tag, dl);
-                }
+                string name = a.TryGetProperty("name", out var n) ? (n.GetString() ?? "") : "";
+                string dl = a.TryGetProperty("browser_download_url", out var b) ? (b.GetString() ?? "") : "";
+                if (name.Length > 0 && dl.Length > 0) found.Add((name, dl));
             }
+
+            var zip = found.FirstOrDefault(a =>
+                a.Name.StartsWith("TaskHeroX-", StringComparison.OrdinalIgnoreCase) &&
+                a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrEmpty(zip.Name))
+                return (false, tag, "");
+
+            string checksumName = zip.Name + ".sha256";
+            bool hasChecksum = found.Any(a =>
+                a.Name.Equals(checksumName, StringComparison.OrdinalIgnoreCase));
+            if (!hasChecksum)
+                return (false, tag, "");
+
+            return (true, tag, zip.Url);
         }
         catch
         {
@@ -114,17 +162,23 @@ public sealed class AutoUpdate
     }
 
     public async Task<(string NewExe, string Exe, string ExeDir)> DownloadAndStageAsync(
-        string url, IProgress<double>? progress = null, CancellationToken ct = default)
+        string url,
+        IProgress<double>? progress = null,
+        CancellationToken ct = default)
     {
         string exe = CurrentExePath();
         string exeDir = Path.GetDirectoryName(exe) ?? Directory.GetCurrentDirectory();
+        string expectedSha256 = await DownloadExpectedSha256Async(url + ".sha256", ct).ConfigureAwait(false);
 
         using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct)
             .ConfigureAwait(false);
         resp.EnsureSuccessStatusCode();
         long total = resp.Content.Headers.ContentLength ?? 0;
+        if (total > MaxUpdateZipBytes)
+            throw new InvalidDataException($"pacote de update excede o limite de {MaxUpdateZipBytes / 1024 / 1024} MB");
 
         using var buf = new MemoryStream();
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         await using (var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false))
         {
             var chunk = new byte[65536];
@@ -132,13 +186,23 @@ public sealed class AutoUpdate
             int got;
             while ((got = await src.ReadAsync(chunk.AsMemory(0, chunk.Length), ct).ConfigureAwait(false)) > 0)
             {
-                buf.Write(chunk, 0, got);
                 read += got;
+                if (read > MaxUpdateZipBytes)
+                    throw new InvalidDataException($"pacote de update excede o limite de {MaxUpdateZipBytes / 1024 / 1024} MB");
+
+                buf.Write(chunk, 0, got);
+                hash.AppendData(chunk, 0, got);
                 if (progress is not null && total > 0)
                     progress.Report(Math.Min((double)read / total, 1.0));
             }
         }
 
+        string actualSha256 = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+        if (!FixedTimeHashEquals(actualSha256, expectedSha256))
+            throw new InvalidDataException(
+                $"falha de integridade SHA-256: esperado {expectedSha256}, recebido {actualSha256}");
+
+        // So abre/processa o ZIP depois da verificacao criptografica.
         buf.Position = 0;
         using var zip = new ZipArchive(buf, ZipArchiveMode.Read);
         var entry = zip.Entries.FirstOrDefault(e => IsPanelExe(e.Name))
@@ -158,6 +222,39 @@ public sealed class AutoUpdate
         string newExe = exe + ".new.exe";
         await File.WriteAllBytesAsync(newExe, data, ct).ConfigureAwait(false);
         return (newExe, exe, exeDir);
+    }
+
+    private static async Task<string> DownloadExpectedSha256Async(string url, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            throw new InvalidDataException("release sem checksum SHA-256");
+
+        using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct)
+            .ConfigureAwait(false);
+        resp.EnsureSuccessStatusCode();
+        long len = resp.Content.Headers.ContentLength ?? 0;
+        if (len > MaxChecksumTextBytes)
+            throw new InvalidDataException("arquivo SHA-256 invalido: tamanho excessivo");
+
+        string text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        if (text.Length > MaxChecksumTextBytes || !TryParseSha256(text, out string expected))
+            throw new InvalidDataException("arquivo SHA-256 invalido ou malformado");
+        return expected;
+    }
+
+    private static bool FixedTimeHashEquals(string actualHex, string expectedHex)
+    {
+        try
+        {
+            byte[] actual = Convert.FromHexString(actualHex);
+            byte[] expected = Convert.FromHexString(expectedHex);
+            return actual.Length == expected.Length &&
+                   CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool IsPanelExe(string name)

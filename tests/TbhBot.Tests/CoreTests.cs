@@ -1,5 +1,7 @@
+using System.Text;
 using TbhBot.Core.Game;
 using TbhBot.Core.Il2Cpp;
+using TbhBot.Core.Update;
 
 namespace TbhBot.Tests;
 
@@ -66,5 +68,41 @@ public class CoreTests
         {
             File.Delete(path);
         }
+    }
+
+    [Fact]
+    public void AutoUpdate_TryParseSha256_AcceptsStandardSidecar()
+    {
+        const string hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+        Assert.True(AutoUpdate.TryParseSha256($"{hash}  TaskHeroX-v0.2.0-win-x64.zip\n", out string parsed));
+        Assert.Equal(hash, parsed);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("abc")]
+    [InlineData("zz7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")]
+    [InlineData("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015a")]
+    public void AutoUpdate_TryParseSha256_RejectsMalformed(string text)
+    {
+        Assert.False(AutoUpdate.TryParseSha256(text, out _));
+    }
+
+    [Fact]
+    public void AutoUpdate_Sha256Matches_UsesKnownVector()
+    {
+        byte[] abc = Encoding.ASCII.GetBytes("abc");
+        const string expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+
+        Assert.True(AutoUpdate.Sha256Matches(abc, expected));
+        Assert.False(AutoUpdate.Sha256Matches(Encoding.ASCII.GetBytes("abd"), expected));
+    }
+
+    [Fact]
+    public void AutoUpdate_CompareVersions_HandlesReleaseTags()
+    {
+        Assert.True(AutoUpdate.CompareVersions("v0.2.0", "0.1.0") > 0);
+        Assert.Equal(0, AutoUpdate.CompareVersions("v1.0.0", "1.0.0"));
+        Assert.True(AutoUpdate.CompareVersions("1.0.0", "1.1.0") < 0);
     }
 }
