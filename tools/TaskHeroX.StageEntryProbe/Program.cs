@@ -7,6 +7,7 @@ const long CandidateA = 0x99E5E0; // decomp: rota que parece cobrir tipos 1/3 + 
 const long CandidateB = 0x99E750; // decomp: rota que parece cobrir tipo 2 + checks de estado/recurso
 
 bool deepCodeDump = args.Contains("--code-dump", StringComparer.OrdinalIgnoreCase);
+bool calleeDump = args.Contains("--callee-dump", StringComparer.OrdinalIgnoreCase);
 
 var e = new Engine();
 if (!e.Attach())
@@ -26,11 +27,10 @@ if (!string.Equals(e.BuildHash, ExpectedBuild, StringComparison.OrdinalIgnoreCas
 
 static string Hex(byte[] bytes) => bytes.Length == 0 ? "(vazio)" : Convert.ToHexString(bytes);
 
-void DumpCandidate(string name, long rva)
+void DumpCode(string name, long rva, int size)
 {
     try
     {
-        int size = deepCodeDump ? 768 : 48;
         var addr = e.Target.ModuleBase + (nint)rva;
         var bytes = e.Memory.ReadBytes(addr, size);
         Console.WriteLine($"{name}: RVA=0x{rva:X} VA=0x{(long)addr:X}");
@@ -42,6 +42,9 @@ void DumpCandidate(string name, long rva)
     }
 }
 
+void DumpCandidate(string name, long rva)
+    => DumpCode(name, rva, deepCodeDump ? 768 : 48);
+
 Console.WriteLine();
 Console.WriteLine("== Candidatos stage-entry ==");
 DumpCandidate("candidate-A", CandidateA);
@@ -49,6 +52,27 @@ DumpCandidate("candidate-B", CandidateB);
 Console.WriteLine("NOTA: este probe NÃO chama candidate-A/B; apenas lê os bytes do GameAssembly.");
 if (!deepCodeDump)
     Console.WriteLine("Use --code-dump para ampliar a leitura de código para 768 bytes por candidato, ainda sem executar nada.");
+
+if (calleeDump)
+{
+    Console.WriteLine();
+    Console.WriteLine("== Callees diretos do candidate-A — SOMENTE CÓDIGO ==");
+    Console.WriteLine("Estes RVAs foram obtidos da desmontagem do candidate-A; o probe apenas lê 384 bytes de cada alvo.");
+    foreach (var (name, rva) in new (string Name, long Rva)[]
+    {
+        ("A.type/getter?",          0x9AA4B0),
+        ("A.required/getter?",      0x9AA740),
+        ("A.manager/singleton?",    0xA939E0),
+        ("A.resource-key/getter?",  0x9AA770),
+        ("A.resource-count?",       0xA940B0),
+        ("A.capacity-used?",        0x962D20),
+        ("A.capacity-max?",         0x95E8B0),
+    })
+    {
+        DumpCode(name, rva, 384);
+    }
+    Console.WriteLine("NOTA: nenhum desses métodos é chamado pelo probe; esta seção é leitura de código para análise offline.");
+}
 
 Console.WriteLine();
 Console.WriteLine("== Progresso atual ==");
