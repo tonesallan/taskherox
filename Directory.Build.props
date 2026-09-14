@@ -7,10 +7,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- Editor de memória de processo 64-bit: o host TEM que ser x64. -->
     <PlatformTarget>x64</PlatformTarget>
-    <Company>matheusbranhann</Company>
-    <Product>TbhBot</Product>
-    <!-- Versão do release. O AutoUpdate lê daqui (via assembly) pra comparar com o GitHub —
-         BUMPAR a cada release, senão o painel publicado nunca se vê como desatualizado. -->
-    <Version>4.12.0</Version>
+    <Company>TaskHeroX Contributors</Company>
+    <Product>TaskHeroX</Product>
+    <!-- TaskHeroX reinicia o versionamento a partir da nova linha independente. -->
+    <Version>0.1.0</Version>
   </PropertyGroup>
 </Project>

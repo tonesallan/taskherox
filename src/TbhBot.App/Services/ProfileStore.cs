@@ -14,24 +14,15 @@ public sealed class Profile
 }
 
 /// <summary>
-/// Persistência dos perfis em <c>profiles.json</c> NA PASTA DO .EXE — assim o painel é portátil:
-/// levou a pasta, levou os perfis; e dá pra ver/editar/versionar o arquivo sem caçar no %APPDATA%.
-///
-/// A pasta é resolvida por <see cref="Environment.ProcessPath"/> — o .exe de verdade, por contrato.
-/// (Medido neste publish single-file: <c>AppContext.BaseDirectory</c> também dá a pasta do exe; a
-/// ressalva de que ele apontaria pra pasta temporária de extração valia no .NET Core 3.x. ProcessPath
-/// é usado mesmo assim por não depender desse detalhe de versão/flags do publish.)
-///
-/// Se a pasta do exe não for gravável (exe em Program Files, pendrive travado, etc.), cai pro
-/// <c>%APPDATA%/tbh_bot</c> em vez de perder o perfil calado — <see cref="ResolvedPath"/> sempre diz
-/// onde de fato salvou. Perfis que já existiam no %APPDATA% são MIGRADOS na primeira gravação.
+/// Persistência dos perfis em <c>profiles.json</c> na pasta do executável.
+/// Se a pasta não for gravável, usa <c>%APPDATA%/TaskHeroX</c>.
+/// Perfis do antigo <c>%APPDATA%/tbh_bot</c> continuam sendo detectados e migrados.
 /// </summary>
 public sealed class ProfileStore
 {
     private const string FileName = "profiles.json";
     private static readonly JsonSerializerOptions Opt = new() { WriteIndented = true };
 
-    /// <summary>Pasta do executável — o destino preferido.</summary>
     public static string ExeDir
     {
         get
@@ -42,29 +33,36 @@ public sealed class ProfileStore
         }
     }
 
-    /// <summary>Fallback histórico: onde os perfis moravam até a v4.2 (e onde ainda vão parar se o exe
-    /// estiver numa pasta só-leitura).</summary>
+    public static string AppDataDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TaskHeroX");
+
+    /// <summary>Pasta histórica usada pelo projeto anterior.</summary>
     public static string LegacyDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "tbh_bot");
 
     private static string ExeFile => Path.Combine(ExeDir, FileName);
+    private static string AppDataFile => Path.Combine(AppDataDir, FileName);
     private static string LegacyFile => Path.Combine(LegacyDir, FileName);
 
-    /// <summary>Caminho realmente usado na última operação — pro log/UI não deixar dúvida.</summary>
     public string ResolvedPath { get; private set; } = ExeFile;
-
-    /// <summary>Avisos ("migrei do %APPDATA%", "pasta do exe é só-leitura") pra barra de status.</summary>
     public Action<string>? Log;
 
     public Dictionary<string, Profile> Load()
     {
-        var mine = TryRead(ExeFile);
-        if (mine is not null) { ResolvedPath = ExeFile; return mine; }
+        var besideExe = TryRead(ExeFile);
+        if (besideExe is not null) { ResolvedPath = ExeFile; return besideExe; }
 
-        // Nada ao lado do exe: aproveita o que existia no %APPDATA% e MIGRA na hora (no primeiro start),
-        // pra não depender do usuário clicar em salvar pra mudança de lugar acontecer.
+        var appData = TryRead(AppDataFile);
+        if (appData is not null) { ResolvedPath = AppDataFile; return appData; }
+
+        // Último fallback: projeto antigo. Save() grava no destino TaskHeroX preferido.
         var legacy = TryRead(LegacyFile);
-        if (legacy is not null) { Save(legacy); return legacy; }
+        if (legacy is not null)
+        {
+            Save(legacy);
+            Log?.Invoke("perfis herdados do tbh_bot foram migrados para TaskHeroX");
+            return legacy;
+        }
 
         ResolvedPath = ExeFile;
         return new();
@@ -78,7 +76,7 @@ public sealed class ProfileStore
             var all = JsonSerializer.Deserialize<Dictionary<string, Profile>>(File.ReadAllText(path));
             return all is { Count: > 0 } ? all : null;
         }
-        catch { return null; }      // arquivo corrompido -> tenta o próximo
+        catch { return null; }
     }
 
     public void Save(Dictionary<string, Profile> all)
@@ -86,26 +84,31 @@ public sealed class ProfileStore
         if (TryWrite(ExeDir, all))
         {
             ResolvedPath = ExeFile;
-            // Migração: o arquivo antigo vira .bak pra não confundir (e pra dar pra voltar atrás).
-            try
-            {
-                if (File.Exists(LegacyFile))
-                {
-                    File.Move(LegacyFile, LegacyFile + ".bak", overwrite: true);
-                    Log?.Invoke($"perfis migrados pro lado do exe ({ExeFile}); o antigo virou profiles.json.bak");
-                }
-            }
-            catch { /* migração é bônus: se falhar, o que importa (gravar) já deu certo */ }
+            BackupLegacyFile();
             return;
         }
 
-        // Pasta do exe não é gravável: não perde o perfil — grava no %APPDATA% e AVISA.
-        if (TryWrite(LegacyDir, all))
+        if (TryWrite(AppDataDir, all))
         {
-            ResolvedPath = LegacyFile;
-            Log?.Invoke($"pasta do exe não é gravável — perfis salvos em {LegacyFile}");
+            ResolvedPath = AppDataFile;
+            BackupLegacyFile();
+            Log?.Invoke($"pasta do exe não é gravável — perfis salvos em {AppDataFile}");
         }
-        else Log?.Invoke("não consegui salvar os perfis (sem permissão de escrita em nenhum dos dois lugares)");
+        else
+        {
+            Log?.Invoke("não consegui salvar os perfis (sem permissão de escrita nos destinos TaskHeroX)");
+        }
+    }
+
+    private void BackupLegacyFile()
+    {
+        try
+        {
+            if (!File.Exists(LegacyFile)) return;
+            File.Move(LegacyFile, LegacyFile + ".bak", overwrite: true);
+            Log?.Invoke("arquivo de perfis legado preservado como profiles.json.bak");
+        }
+        catch { }
     }
 
     private static bool TryWrite(string dir, Dictionary<string, Profile> all)

@@ -17,12 +17,11 @@ namespace TbhBot.Core.Automation;
 /// </summary>
 public sealed class AutomationLoop(Engine engine)
 {
-    // Passo do loop. No Python era 0.12s quando fez algo / 0.5s ocioso; 250ms e um meio-termo
-    // idiomatico e responsivo o bastante p/ abrir caixa "na hora que dropa".
     private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(250);
 
-    /// <summary>Log textual (equivalente ao self.log do Python).</summary>
     public event Action<string>? Log;
+
+    private bool _stageEntryBlockedLogged;
 
     public async Task RunAsync(CancellationToken ct)
     {
@@ -30,9 +29,6 @@ public sealed class AutomationLoop(Engine engine)
         {
             try
             {
-                // So opera com o jogo vivo/conectado; senao apenas espera (o Watchdog reconecta).
-                // WdHold = restart em andamento: NÃO aplica nada durante o boot (start limpo, evita bater
-                // no honesty-check do ACTk / escrever com o jogo carregando). O WatchdogService libera depois.
                 if (!engine.WdHold && engine.IsAttached && engine.Target.IsAlive())
                 {
                     ApplyCheats();
@@ -41,7 +37,6 @@ public sealed class AutomationLoop(Engine engine)
             }
             catch (Exception ex)
             {
-                // Um tick nunca derruba o loop (no Python: except -> sleep(0.3)).
                 Log?.Invoke($"auto: erro ({ex.Message}) — seguindo");
             }
 
@@ -56,25 +51,17 @@ public sealed class AutomationLoop(Engine engine)
         }
     }
 
-    /// <summary>
-    /// Aplica/retira protecao e cheats conforme as flags de intencao. Idempotente: setar toda
-    /// iteracao e barato e faz self-heal (se o jogo reiniciou e o cheat sumiu, ele volta).
-    /// </summary>
     private void ApplyCheats()
     {
         engine.Cheats.SetActk(engine.WantActk);
         engine.Cheats.SetGodmode(engine.WantGodmode);
 
-        // Stats/stage forçados: re-aplica TODO tick (o jogo sobrescreve uma escrita única). Snapshot da ref.
-        // O catch NÃO pode ser mudo: era assim que "não aplicou depois do restart" acontecia calado.
         var st = engine.WantStats;
         if (st.Count > 0) { try { WarnBool("stats", engine.Stats.ApplyStats(st), st.Count); } catch (Exception ex) { WarnOnce("stats", ex); } }
         var sg = engine.WantStage;
         if (sg.Count > 0) { try { WarnBool("stage", engine.Stats.ApplyStage(sg), sg.Count); } catch (Exception ex) { WarnOnce("stage", ex); } }
     }
 
-    // Avisa a PRIMEIRA falha de cada tipo (e quando volta a funcionar); sem isso o log viraria spam
-    // de 3 linhas por segundo, com isso o silêncio deixa de esconder o problema.
     private readonly Dictionary<string, bool> _failing = new();
 
     private void WarnBool(string what, bool ok, int n)
@@ -94,43 +81,47 @@ public sealed class AutomationLoop(Engine engine)
                         : $"✔ {what} voltou a aplicar");
     }
 
-    /// <summary>
-    /// Executa as automacoes de acao na ordem de prioridade box -> stash -> fuse (racional do
-    /// _auto_loop: caixa e prioridade maxima, checada TODO tick pra abrir assim que dropa; o fuse
-    /// vem por ultimo). As acoes reais rodam pelo dispatcher (Fase 3).
-    /// </summary>
     private void RunActions()
     {
-        // Mesma ORDEM/GATING do _auto_loop do Python: caixa -> stash -> fuse rodam sempre; auto-boss,
-        // evolução e a ORDENAÇÃO do baú só quando NADA mais aconteceu no tick (did==false) — senão o
-        // box/stash matariam de fome os modos que bloqueiam. 'did' acumula ao longo do tick.
         bool did = false;
 
-        // 1) CAIXA (prioridade máxima): acha as StageBox vivas + abre via dispatcher (llx main-thread).
-        //    Gate de espaço: não abre se o inventário está cheio (a recompensa pode ser item e o servidor
-        //    rejeita -> "game will close" -> ciclo de fechar/reabrir, e possível perda). O auto-stash/fuse
-        //    (abaixo) esvaziam o inventário, então isto se auto-regula.
         if (engine.WantAutobox && engine.AutoBox.OpenAll(() => engine.WantAutobox && engine.IsAttached, engine.AutoStash.InvFree))
             did = true;
 
-        // 2) STASH em lote: move inventário -> baú (cmd2 = iw via dispatcher).
         if (engine.WantAutostash && engine.AutoStash.MoveAllToStash(() => engine.WantAutostash && engine.IsAttached) > 0)
             did = true;
 
-        // 3) FUSE: uma síntese por tick (enche o cubo + funde 9 -> 1, level-safe). NÃO gateado por !did.
         if (engine.WantAutofuse && engine.AutoFuse.DoSynth(() => engine.WantAutofuse && engine.IsAttached))
             did = true;
 
-        // 4) AUTO-BOSS: gasta 1 soulstone no x-10 e volta. Só quando ocioso (pode bloquear a luta inteira).
-        if (engine.WantAutoboss && !did && engine.StageAutomation.AutoBoss(() => engine.WantAutoboss && engine.IsAttached))
+        // AutoBoss/Evolution dependem do caminho de validação de entrada de stage (jgc).
+        // Na build 139467f3ad72 esse método foi dividido em duas rotas com semânticas diferentes;
+        // escolher uma arbitrariamente seria inseguro. Até existir um jgc validado para o build,
+        // as intenções são desligadas aqui no engine — não apenas escondidas na UI.
+        bool stageEntryReady = engine.Symbols.Has("jgc");
+        if (!stageEntryReady && (engine.WantAutoboss || engine.WantEvolve))
+        {
+            engine.WantAutoboss = false;
+            engine.WantEvolve = false;
+            if (!_stageEntryBlockedLogged)
+            {
+                _stageEntryBlockedLogged = true;
+                Log?.Invoke("⚠ AutoBoss/Evolution bloqueados: stage-entry (jgc) ainda não foi validado para este build");
+            }
+        }
+        else if (stageEntryReady)
+        {
+            _stageEntryBlockedLogged = false;
+        }
+
+        if (stageEntryReady && engine.WantAutoboss && !did &&
+            engine.StageAutomation.AutoBoss(() => engine.WantAutoboss && engine.IsAttached))
             did = true;
 
-        // 5) EVOLUÇÃO: mantém você sempre na fase mais nova liberada. Só quando ocioso.
-        if (engine.WantEvolve && !did && engine.StageAutomation.Evolve(() => engine.WantEvolve && engine.IsAttached))
+        if (stageEntryReady && engine.WantEvolve && !did &&
+            engine.StageAutomation.Evolve(() => engine.WantEvolve && engine.IsAttached))
             did = true;
 
-        // 6) ORDENAÇÃO do baú por grade (sob a flag do auto-stash): UM move por tick, só quando ocioso —
-        //    amortizado pra não travar o auto-box (igual ao _sort_grade_step do Python).
         if (engine.WantAutostash && !did)
             engine.AutoStash.SortStep(2);
     }

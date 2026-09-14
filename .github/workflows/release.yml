@@ -1,0 +1,103 @@
+name: TaskHeroX Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag commit belongs to main
+        shell: pwsh
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$env:GITHUB_SHA" "origin/main"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release bloqueado: a tag precisa apontar para um commit presente em main."
+          }
+
+      - name: Validate release tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -notmatch '^v\d+\.\d+\.\d+$') {
+            throw "Tag invalida: use o formato vMAJOR.MINOR.PATCH, por exemplo v0.2.0."
+          }
+
+          $version = $tag.Substring(1)
+          $zip = "TaskHeroX-$tag-win-x64.zip"
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore TbhBot.slnx
+
+      - name: Test
+        run: dotnet test TbhBot.slnx -c Release --no-restore
+
+      - name: Publish single-file TaskHeroX
+        shell: pwsh
+        run: |
+          dotnet publish src/TbhBot.App/TbhBot.App.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            --no-restore `
+            -p:Version=$env:VERSION `
+            -p:InformationalVersion=$env:VERSION `
+            -p:PublishSingleFile=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish
+
+          if (-not (Test-Path 'publish/TaskHeroX.exe')) {
+            throw 'Publish nao gerou publish/TaskHeroX.exe.'
+          }
+
+      - name: Package and generate SHA-256
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          $zipPath = Join-Path 'dist' $env:RELEASE_ZIP
+          Compress-Archive -Path 'publish/TaskHeroX.exe' -DestinationPath $zipPath -CompressionLevel Optimal -Force
+
+          $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $env:RELEASE_ZIP" | Set-Content -Path "$zipPath.sha256" -Encoding ascii -NoNewline
+
+          Write-Host "Release asset: $zipPath"
+          Write-Host "SHA-256: $hash"
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zipPath = Join-Path 'dist' $env:RELEASE_ZIP
+          $shaPath = "$zipPath.sha256"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $zipPath $shaPath --clobber
+          }
+          else {
+            gh release create $tag $zipPath $shaPath --title "TaskHeroX $tag" --generate-notes
+          }

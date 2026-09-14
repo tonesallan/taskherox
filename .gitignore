@@ -16,6 +16,11 @@ dist/
 [Rr]elease/
 artifacts/
 
+# TaskHeroX local backups / migration diagnostics
+*.bak
+backups/
+python_old_project/diag_*.py
+
 # web-preview (mockup do layout) — deps geradas
 layout/web-preview/node_modules/
 layout/web-preview/.vite/

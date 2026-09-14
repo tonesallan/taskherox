@@ -1,35 +1,33 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace TbhBot.Core.Update;
 
 /// <summary>
-/// Auto-update via GitHub Releases — porta de check_update/download_update/launch_updater
-/// do tbh_core.py (~linhas 16-92).
+/// Auto-update via GitHub Releases.
 ///
-/// E o caminho que faz o painel se curar sozinho quando O JOGO atualiza: cada release ja sai com os
-/// offsets do build novo embutidos (Offsets/offsets_&lt;hash&gt;.json), entao baixar a versao nova
-/// restaura tudo sem exigir .NET 6 / Il2CppDumper na maquina do usuario.
+/// Releases oficiais precisam publicar o ZIP e um sidecar <c>.sha256</c> com o
+/// mesmo nome. O ZIP so e aberto depois que o SHA-256 baixado do release foi
+/// validado, evitando executar um pacote corrompido ou alterado em transito.
 /// </summary>
 public sealed class AutoUpdate
 {
-    // Repo de releases.
-    public const string Repo = "matheusbranhann/taskbarhero-bot";
+    public const string Repo = "tonesallan/taskherox";
 
     /// <summary>
-    /// Versao deste build. Vem do assembly (&lt;Version&gt; do Directory.Build.props) — UM lugar so
-    /// pra bumpar por release. Hardcodar aqui ja causou release publicado com versao velha.
+    /// Versao deste build. Vem do assembly (&lt;Version&gt; do Directory.Build.props)
+    /// ou da versao injetada pelo workflow de release.
     /// </summary>
     public static readonly string CurrentVersion = ResolveVersion();
 
     private static string ResolveVersion()
     {
-        var asm = System.Reflection.Assembly.GetEntryAssembly() ?? typeof(AutoUpdate).Assembly;
-        var info = asm.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+        var asm = Assembly.GetEntryAssembly() ?? typeof(AutoUpdate).Assembly;
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                       ?.InformationalVersion;
-        // "4.1.0+abc1234" (o SDK anexa o commit) -> "4.1.0"
         if (!string.IsNullOrWhiteSpace(info))
         {
             int plus = info.IndexOf('+');
@@ -38,8 +36,9 @@ public sealed class AutoUpdate
         return asm.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
-    // User-Agent OBRIGATORIO pela API do GitHub (rejeita requests sem UA).
-    private const string UserAgent = "tbh_bot-updater";
+    private const string UserAgent = "TaskHeroX-updater";
+    private const long MaxUpdateZipBytes = 512L * 1024 * 1024;
+    private const int MaxChecksumTextBytes = 16 * 1024;
 
     private static readonly HttpClient Http = CreateClient();
 
@@ -51,10 +50,6 @@ public sealed class AutoUpdate
         return c;
     }
 
-    /// <summary>
-    /// 'v3.1'/'3.10' -> (3,1)/(3,10) pra comparar versao ordinalmente (funcao pura, testavel).
-    /// Igual ao _ver_tuple do Python: descarta o 'v', pega so digitos de cada segmento.
-    /// </summary>
     public static int[] VerTuple(string? s)
     {
         var trimmed = (s ?? "").TrimStart('v', 'V').Trim();
@@ -69,7 +64,6 @@ public sealed class AutoUpdate
         return outv;
     }
 
-    /// <summary>Compara duas tuplas de versao ordinalmente (como tuple do Python: elemento a elemento).</summary>
     public static int CompareVersions(string a, string b)
     {
         int[] ta = VerTuple(a), tb = VerTuple(b);
@@ -84,9 +78,40 @@ public sealed class AutoUpdate
     }
 
     /// <summary>
-    /// Consulta releases/latest do GitHub. Retorna (Available, Tag, Url) com Available=true so se houver
-    /// versao MAIOR que <paramref name="currentVersion"/> e um asset .zip. Silencioso em falha de rede.
-    /// Porta de check_update().
+    /// Aceita o formato padrao de checksum (<c>hash  arquivo.zip</c>) ou apenas
+    /// os 64 caracteres hexadecimais. Outros formatos sao rejeitados.
+    /// </summary>
+    public static bool TryParseSha256(string? text, out string sha256)
+    {
+        sha256 = string.Empty;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        string first = text.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault() ?? string.Empty;
+        if (first.Length != 64 || first.Any(c => !Uri.IsHexDigit(c))) return false;
+
+        sha256 = first.ToLowerInvariant();
+        return true;
+    }
+
+    /// <summary>
+    /// Utilitario testavel para a mesma validacao criptografica usada no updater.
+    /// </summary>
+    public static bool Sha256Matches(ReadOnlySpan<byte> data, string expectedSha256)
+    {
+        if (!TryParseSha256(expectedSha256, out string normalized)) return false;
+        byte[] expected;
+        try { expected = Convert.FromHexString(normalized); }
+        catch { return false; }
+
+        byte[] actual = SHA256.HashData(data);
+        return CryptographicOperations.FixedTimeEquals(actual, expected);
+    }
+
+    /// <summary>
+    /// Consulta releases/latest do TaskHeroX. Available=true somente quando existe
+    /// versao maior com um ZIP TaskHeroX e o sidecar correspondente .sha256.
+    /// Release sem checksum nao e oferecido ao usuario.
     /// </summary>
     public async Task<(bool Available, string Tag, string Url)> CheckAsync(
         string currentVersion, CancellationToken ct = default)
@@ -104,44 +129,56 @@ public sealed class AutoUpdate
             if (CompareVersions(tag, currentVersion) <= 0)
                 return (false, tag, "");
 
-            if (root.TryGetProperty("assets", out var assets) &&
-                assets.ValueKind == JsonValueKind.Array)
+            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+                return (false, tag, "");
+
+            var found = new List<(string Name, string Url)>();
+            foreach (var a in assets.EnumerateArray())
             {
-                foreach (var a in assets.EnumerateArray())
-                {
-                    var name = a.TryGetProperty("name", out var n) ? (n.GetString() ?? "") : "";
-                    if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
-                    var dl = a.TryGetProperty("browser_download_url", out var b) ? (b.GetString() ?? "") : "";
-                    if (dl.Length > 0)
-                        return (true, tag, dl);
-                }
+                string name = a.TryGetProperty("name", out var n) ? (n.GetString() ?? "") : "";
+                string dl = a.TryGetProperty("browser_download_url", out var b) ? (b.GetString() ?? "") : "";
+                if (name.Length > 0 && dl.Length > 0) found.Add((name, dl));
             }
+
+            var zip = found.FirstOrDefault(a =>
+                a.Name.StartsWith("TaskHeroX-", StringComparison.OrdinalIgnoreCase) &&
+                a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrEmpty(zip.Name))
+                return (false, tag, "");
+
+            string checksumName = zip.Name + ".sha256";
+            bool hasChecksum = found.Any(a =>
+                a.Name.Equals(checksumName, StringComparison.OrdinalIgnoreCase));
+            if (!hasChecksum)
+                return (false, tag, "");
+
+            return (true, tag, zip.Url);
         }
         catch
         {
-            // Silencioso: sem rede / rate-limit / json torto -> simplesmente sem update.
+            // Sem rede / rate-limit / release ausente -> segue sem update.
         }
         return (false, "", "");
     }
 
-    /// <summary>
-    /// Baixa o zip do release e extrai o exe do painel (TBH_Panel.exe / TbhBot*.exe) para
-    /// "&lt;exe atual&gt;.new.exe" ao lado do executavel corrente. Retorna (NewExe, Exe, ExeDir).
-    /// Porta de download_update().
-    /// </summary>
     public async Task<(string NewExe, string Exe, string ExeDir)> DownloadAndStageAsync(
-        string url, IProgress<double>? progress = null, CancellationToken ct = default)
+        string url,
+        IProgress<double>? progress = null,
+        CancellationToken ct = default)
     {
         string exe = CurrentExePath();
         string exeDir = Path.GetDirectoryName(exe) ?? Directory.GetCurrentDirectory();
+        string expectedSha256 = await DownloadExpectedSha256Async(url + ".sha256", ct).ConfigureAwait(false);
 
-        // Baixa o zip inteiro pra memoria (com progresso, se Content-Length disponivel).
         using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct)
             .ConfigureAwait(false);
         resp.EnsureSuccessStatusCode();
         long total = resp.Content.Headers.ContentLength ?? 0;
+        if (total > MaxUpdateZipBytes)
+            throw new InvalidDataException($"pacote de update excede o limite de {MaxUpdateZipBytes / 1024 / 1024} MB");
 
         using var buf = new MemoryStream();
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         await using (var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false))
         {
             var chunk = new byte[65536];
@@ -149,17 +186,27 @@ public sealed class AutoUpdate
             int got;
             while ((got = await src.ReadAsync(chunk.AsMemory(0, chunk.Length), ct).ConfigureAwait(false)) > 0)
             {
-                buf.Write(chunk, 0, got);
                 read += got;
+                if (read > MaxUpdateZipBytes)
+                    throw new InvalidDataException($"pacote de update excede o limite de {MaxUpdateZipBytes / 1024 / 1024} MB");
+
+                buf.Write(chunk, 0, got);
+                hash.AppendData(chunk, 0, got);
                 if (progress is not null && total > 0)
                     progress.Report(Math.Min((double)read / total, 1.0));
             }
         }
 
+        string actualSha256 = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+        if (!FixedTimeHashEquals(actualSha256, expectedSha256))
+            throw new InvalidDataException(
+                $"falha de integridade SHA-256: esperado {expectedSha256}, recebido {actualSha256}");
+
+        // So abre/processa o ZIP depois da verificacao criptografica.
         buf.Position = 0;
         using var zip = new ZipArchive(buf, ZipArchiveMode.Read);
         var entry = zip.Entries.FirstOrDefault(e => IsPanelExe(e.Name))
-            ?? throw new InvalidOperationException("zip do release nao contem o exe do painel (TBH_Panel.exe/TbhBot*.exe)");
+            ?? throw new InvalidOperationException("zip do release nao contem TaskHeroX.exe");
 
         byte[] data;
         await using (var es = entry.Open())
@@ -169,7 +216,6 @@ public sealed class AutoUpdate
             data = ms.ToArray();
         }
 
-        // Sanidade: o exe real e dezenas de MB; muito menor = download torto/asset errado.
         if (data.Length < 1_000_000)
             throw new InvalidOperationException($"exe baixado pequeno demais ({data.Length} bytes)");
 
@@ -178,15 +224,48 @@ public sealed class AutoUpdate
         return (newExe, exe, exeDir);
     }
 
+    private static async Task<string> DownloadExpectedSha256Async(string url, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            throw new InvalidDataException("release sem checksum SHA-256");
+
+        using var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct)
+            .ConfigureAwait(false);
+        resp.EnsureSuccessStatusCode();
+        long len = resp.Content.Headers.ContentLength ?? 0;
+        if (len > MaxChecksumTextBytes)
+            throw new InvalidDataException("arquivo SHA-256 invalido: tamanho excessivo");
+
+        string text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        if (text.Length > MaxChecksumTextBytes || !TryParseSha256(text, out string expected))
+            throw new InvalidDataException("arquivo SHA-256 invalido ou malformado");
+        return expected;
+    }
+
+    private static bool FixedTimeHashEquals(string actualHex, string expectedHex)
+    {
+        try
+        {
+            byte[] actual = Convert.FromHexString(actualHex);
+            byte[] expected = Convert.FromHexString(expectedHex);
+            return actual.Length == expected.Length &&
+                   CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static bool IsPanelExe(string name)
     {
         if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return false;
+        if (name.Equals("TaskHeroX.exe", StringComparison.OrdinalIgnoreCase)) return true;
+        // Compatibilidade temporaria durante a migracao do nome interno dos projetos.
         if (name.Equals("TBH_Panel.exe", StringComparison.OrdinalIgnoreCase)) return true;
         return name.StartsWith("TbhBot", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Conteudo do .bat updater: espera o PID sair, troca o exe (retenta ate destravar) e reabre.
-    // Porta de _UPDATER_BAT (CRLF, %~1=exe %~2=new %~3=pid).
     private const string UpdaterBat =
         "@echo off\r\n" +
         "setlocal\r\n" +
@@ -202,14 +281,9 @@ public sealed class AutoUpdate
         "start \"\" \"%EXE%\"\r\n" +
         "del \"%~f0\"\r\n";
 
-    /// <summary>
-    /// Escreve o .bat updater e o lanca DESACOPLADO. Ele espera ESTE processo (PID) sair, troca o exe
-    /// (&lt;exe&gt;.new.exe -> &lt;exe&gt;) e reabre o painel. O chamador deve encerrar logo apos, senao o
-    /// 'move' fica retentando ate o processo fechar. Porta de launch_updater().
-    /// </summary>
     public void LaunchUpdater(string newExe, string exe, string exeDir)
     {
-        string bat = Path.Combine(exeDir, "_tbh_update.bat");
+        string bat = Path.Combine(exeDir, "_taskherox_update.bat");
         File.WriteAllText(bat, UpdaterBat, System.Text.Encoding.ASCII);
 
         int pid = Environment.ProcessId;
@@ -228,12 +302,11 @@ public sealed class AutoUpdate
         Process.Start(psi);
     }
 
-    // Caminho do executavel corrente (equivalente a sys.executable no exe congelado).
     private static string CurrentExePath()
     {
         var p = Environment.ProcessPath;
         if (!string.IsNullOrEmpty(p)) return p;
         return Process.GetCurrentProcess().MainModule?.FileName
-            ?? Path.Combine(AppContext.BaseDirectory, "TbhBot.exe");
+            ?? Path.Combine(AppContext.BaseDirectory, "TaskHeroX.exe");
     }
 }
