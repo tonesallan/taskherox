@@ -39,18 +39,74 @@ public sealed class SaveData(
 
     // ---------------- PROGRESSO DE ESTAGIO ----------------
 
-    /// <summary>(maxCompletedStage, currentStageKey, wave). -1 em cada campo que nao resolver.</summary>
+    /// <summary>
+    /// (maxCompletedStage, currentStageKey, wave). -1 em cada campo que nao resolver.
+    ///
+    /// max/wave continuam preferindo os ObscuredInt runtime, que foram validados ao vivo. Para Cur,
+    /// preferimos CommonSaveData.currentStageKey quando disponivel: na build 139467f3ad72 o antigo
+    /// uo_cur ficou observado ao vivo como 4309 enquanto o jogo/save ja estava em 3309. Essa divergencia
+    /// fazia GoToStage parecer falhar e impedia Evolution/AutoBoss de observar transicoes reais.
+    /// </summary>
     public (int Max, int Cur, int Wave) StageProgress()
     {
         nint sf = UoStaticFields();
-        if (sf == 0) return (-1, -1, -1);
         int G(string key)
         {
+            if (sf == 0) return -1;
             long o = sym.Get(key);
             if (o == 0) return -1;
             return ObscuredValue.ReadInt(mem, sf + (nint)o) ?? -1;
         }
-        return (G("uo_max"), G("uo_cur"), G("uo_wave"));
+
+        int max = G("uo_max");
+        int cur = G("uo_cur");
+        int wave = G("uo_wave");
+
+        // Fonte nomeada do próprio save para currentStageKey. Além de semanticamente mais forte que o
+        // offset heurístico uo_cur, foi a fonte que acompanhou corretamente a seleção 4309 -> 3309 no
+        // diagnóstico live da build atual. max/wave só usam CommonSaveData como fallback para minimizar
+        // a mudança de comportamento das rotas já validadas.
+        try
+        {
+            nint psd = resolver.ResolvePsd();
+            if (psd != 0)
+            {
+                nint commonOff = (nint)sym.Get("psd_common_off", 0x10);
+                nint csd = mem.ReadPtr(psd + commonOff);
+                if (MemoryAccess.IsValidPointer(csd))
+                {
+                    long curOff = sym.Get("commonsave_curstage", 0x64);
+                    if (curOff != 0)
+                    {
+                        int saveCur = mem.ReadI32(csd + (nint)curOff);
+                        if (saveCur > 0) cur = saveCur;
+                    }
+
+                    if (max < 0)
+                    {
+                        long maxOff = sym.Get("commonsave_maxstage", 0x5C);
+                        if (maxOff != 0)
+                        {
+                            int saveMax = mem.ReadI32(csd + (nint)maxOff);
+                            if (saveMax > 0) max = saveMax;
+                        }
+                    }
+
+                    if (wave < 0)
+                    {
+                        long waveOff = sym.Get("CommonSaveData.currentStageWave", 0x68);
+                        if (waveOff != 0)
+                        {
+                            int saveWave = mem.ReadI32(csd + (nint)waveOff);
+                            if (saveWave >= 0) wave = saveWave;
+                        }
+                    }
+                }
+            }
+        }
+        catch { /* named save path é preferencial/best-effort; runtime continua como fallback */ }
+
+        return (max, cur, wave);
     }
 
     /// <summary>
@@ -71,7 +127,7 @@ public sealed class SaveData(
             {
                 nint csd = mem.ReadPtr(psd + 0x10);
                 if (MemoryAccess.IsValidPointer(csd))
-                    mem.Write<int>(csd + (nint)sym.Get("commonsave_maxstage", 0x54), value);
+                    mem.Write<int>(csd + (nint)sym.Get("commonsave_maxstage", 0x5C), value);
             }
         }
         catch { /* espelhamento e opcional */ }
