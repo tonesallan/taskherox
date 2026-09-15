@@ -3,8 +3,8 @@ using TbhBot.Core.Game;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-const string ExpectedBuild = "139467f3ad72";
-const long CandidateA = 0x99E5E0;
+const string ExpectedBuild = "c265dc8bc7aa";
+const long CandidateA = 0x9A9F20;
 
 bool successMode = args.Contains("--success", StringComparer.OrdinalIgnoreCase);
 bool productionRoute = args.Contains("--production-route", StringComparer.OrdinalIgnoreCase);
@@ -36,7 +36,7 @@ if (!string.Equals(e.BuildHash, ExpectedBuild, StringComparison.OrdinalIgnoreCas
 }
 
 var table = e.StageNav.StageTable();
-if (!table.TryGetValue(testStage, out var info) || info.Type != 1)
+if (!table.TryGetValue(testStage, out var info) || info.Type != 1 || info.Ss != soulStoneKey)
 {
     Console.WriteLine($"[BLOCKED] stage {testStage} não é type=1 nesta sessão.");
     return;

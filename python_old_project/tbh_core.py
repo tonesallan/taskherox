@@ -647,8 +647,15 @@ def _stage_anchors(ddir):
     for typ,nm,off,_ in st:
         if re.fullmatch(r'Dictionary<int,\s*[\w\.]*\.?StageCache>',typ) and "uo_dict" not in out: out["uo_dict"]=off
         elif re.fullmatch(r'[\w\.]*\.?StageCache',typ) and "uo_cur_cache" not in out: out["uo_cur_cache"]=off
-    obs=[f[2] for f in st if f[0]=="ObscuredInt"]            # ordem: max, cur_key, cur_wave
-    if len(obs)>=3: out["uo_max"],out["uo_cur"],out["uo_wave"]=obs[0],obs[1],obs[2]
+    # ObscuredInt da UO.
+    #
+    # NÃO associar pela posição. Até a build 139467f3ad72 existiam 3 campos
+    # (max/current/wave), mas a c265dc8bc7aa passou a ter 5:
+    # 0x50,0x60,0x70,0x80,0x90.
+    #
+    # current/wave são resolvidos semanticamente abaixo pela rotina chamada
+    # por jgk que instala a StageCache atual.
+    obs=[f[2] for f in st if f[0]=="ObscuredInt"]
     # bal: o campo 'stageInfoData' NAO e ofuscado (tabela desserializada por nome)
     bals=[(k,off) for k in classes for typ,nm,off,_ in k.fields if nm=="stageInfoData" and typ=="List<StageInfoData>"]
     if len(bals)!=1: raise AssertionError("bal ambiguo (%d)"%len(bals))
@@ -663,7 +670,308 @@ def _stage_anchors(ddir):
     SC=r'[\w\.]*\.?StageCache'
     out["jgk"]=_a_pick(cal,"void",[r'int'],"jgk",pe,addrs)                       # entrar na fase
     out["jgq"]=_a_pick(cal,"bool",[r'int'],"jgq",pe,addrs)                       # liberado?
-    out["jgc"]=_a_pick(cal,"EStageEnterResultType",[SC],"jgc",pe,addrs)          # validador (soulstone/bau)
+
+    # ------------------------------------------------------------------
+    # UO runtime stage offsets — resolução SEMÂNTICA
+    # ------------------------------------------------------------------
+    #
+    # max:
+    #   jgq(int) é o predicado de stage liberado e consulta maxCompletedStage.
+    #
+    # current/wave:
+    #   jgk(int) chama uma rotina UO void(StageCache). Essa rotina:
+    #     1. grava o ObscuredInt do StageKey atual;
+    #     2. grava o ponteiro StageCache em uo_cur_cache;
+    #     3. mais tarde grava o ObscuredInt da wave.
+    #
+    # Isso evita depender da ordem dos campos estáticos, que quebrou na c265.
+    def _mem_offsets(ins, candidates):
+        op=ins.op_str or ""
+        if "[" not in op:
+            return set()
+
+        # Stack/frame locals não são campos static da UO.
+        lop=op.lower()
+        if "[rsp" in lop or "[rbp" in lop:
+            return set()
+
+        got=set()
+        for off in candidates:
+            hx=hex(off)[2:]
+            if re.search(r'\+\s*0x0*'+re.escape(hx)+r'\]', lop):
+                got.add(off)
+        return got
+
+    def _write_offsets(ins, candidates):
+        if not ins.mnemonic.startswith("mov"):
+            return set()
+
+        op=ins.op_str or ""
+        if "," not in op:
+            return set()
+
+        dst=op.split(",",1)[0].lower()
+
+        if "[" not in dst:
+            return set()
+
+        if "[rsp" in dst or "[rbp" in dst:
+            return set()
+
+        got=set()
+        for off in candidates:
+            hx=hex(off)[2:]
+            if re.search(r'\+\s*0x0*'+re.escape(hx)+r'\]', dst):
+                got.add(off)
+        return got
+
+    obs_set=set(obs)
+
+    # --- uo_max via jgq ---
+    max_hits=set()
+
+    for ins in _a_dis(pe,addrs,out["jgq"]):
+        max_hits.update(_mem_offsets(ins,obs_set))
+
+    if len(max_hits)==1:
+        out["uo_max"]=next(iter(max_hits))
+    elif len(obs)==3:
+        # Compatibilidade controlada com builds antigas cuja UO tinha
+        # EXATAMENTE max/current/wave e nenhum ObscuredInt extra.
+        out["uo_max"]=obs[0]
+    else:
+        raise AssertionError(
+            "uo_max ambiguo via jgq: obs=%r hits=%r"
+            %(obs,sorted(max_hits))
+        )
+
+    # --- acha o helper void(StageCache) chamado diretamente por jgk ---
+    SC2=r'[\w\.]*\.?StageCache'
+
+    stage_helpers=[]
+
+    for kind,tgt in _a_flow(pe,addrs,out["jgk"]):
+        sig=uom.get(tgt)
+        if not sig:
+            continue
+
+        p=_a_sig(sig)
+        if not p:
+            continue
+
+        stt,ret,nm,args=p
+
+        if (
+            stt
+            and ret=="void"
+            and len(args)==1
+            and re.fullmatch(SC2,args[0])
+        ):
+            stage_helpers.append(tgt)
+
+    stage_helpers=sorted(set(stage_helpers))
+
+    resolved=[]
+
+    for helper in stage_helpers:
+        dis=_a_dis(pe,addrs,helper)
+
+        cache_writes=[]
+
+        for idx,ins in enumerate(dis):
+            if out.get("uo_cur_cache") in _write_offsets(
+                ins,
+                {out.get("uo_cur_cache")}
+            ):
+                cache_writes.append(idx)
+
+        for cache_idx in cache_writes:
+            before=[]
+            after=[]
+
+            for idx,ins in enumerate(dis):
+                wh=_write_offsets(ins,obs_set)
+
+                if not wh:
+                    continue
+
+                for off in wh:
+                    if idx < cache_idx:
+                        before.append((idx,off))
+                    elif idx > cache_idx:
+                        after.append((idx,off))
+
+            if not before or not after:
+                continue
+
+            # StageKey é o ObscuredInt gravado imediatamente antes de
+            # currentStageCache.
+            cur_idx,cur_off=max(
+                before,
+                key=lambda x:x[0]
+            )
+
+            # Evita casar uma gravação distante/não relacionada.
+            if cache_idx-cur_idx > 12:
+                continue
+
+            # Wave é o primeiro ObscuredInt gravado depois da instalação
+            # da StageCache atual.
+            wave_idx,wave_off=min(
+                after,
+                key=lambda x:x[0]
+            )
+
+            if cur_off==wave_off:
+                continue
+
+            resolved.append(
+                (
+                    helper,
+                    cur_off,
+                    wave_off,
+                    cache_idx-cur_idx,
+                    wave_idx-cache_idx
+                )
+            )
+
+    # Remove clones semanticamente equivalentes.
+    semantic_pairs=sorted(
+        set(
+            (cur,wave)
+            for _,cur,wave,_,_ in resolved
+        )
+    )
+
+    if len(semantic_pairs)==1:
+        out["uo_cur"],out["uo_wave"]=semantic_pairs[0]
+
+    elif len(obs)==3:
+        # Fallback SOMENTE para o layout histórico inequívoco de 3 campos.
+        remaining=[
+            x for x in obs
+            if x!=out["uo_max"]
+        ]
+
+        if len(remaining)!=2:
+            raise AssertionError(
+                "uo_cur/wave fallback invalido: %r"
+                %remaining
+            )
+
+        out["uo_cur"],out["uo_wave"]=remaining[0],remaining[1]
+
+    else:
+        raise AssertionError(
+            "uo_cur/wave ambiguos: helpers=%r resolved=%r pairs=%r"
+            %(stage_helpers,resolved,semantic_pairs)
+        )
+
+    if (
+        out["uo_max"]==out["uo_cur"]
+        or out["uo_max"]==out["uo_wave"]
+        or out["uo_cur"]==out["uo_wave"]
+    ):
+        raise AssertionError(
+            "uo offsets colidiram: max=%#x cur=%#x wave=%#x"
+            %(out["uo_max"],out["uo_cur"],out["uo_wave"])
+        )
+
+    # ------------------------------------------------------------------
+    # Validadores de entrada por STAGETYPE
+    # ------------------------------------------------------------------
+    #
+    # Builds antigas expunham um unico EStageEnterResultType(StageCache).
+    # Na c265 existem DOIS:
+    #
+    #   type 1/3 -> SoulStone / boss tradicional
+    #   type 2   -> fluxo distinto
+    #
+    # Nao mapear ambos novamente para um "jgc" generico.
+    validator_hits=[]
+
+    for rva,sig in cal.items():
+        p=_a_sig(sig)
+
+        if not p:
+            continue
+
+        stt,ret,nm,args=p
+
+        if (
+            stt
+            and ret=="EStageEnterResultType"
+            and len(args)==1
+            and re.fullmatch(SC,args[0])
+        ):
+            validator_hits.append(rva)
+
+    validator_hits=sorted(set(validator_hits))
+
+    def _direct_cmp_immediates(rva):
+        vals=set()
+
+        for ins in _a_dis(pe,addrs,rva):
+            if ins.mnemonic!="cmp":
+                continue
+
+            op=(ins.op_str or "").strip().lower()
+
+            # Apenas "cmp REG, IMM".
+            # Ignora compares de memoria/metadados como [rcx+0xe4],0.
+            m=re.fullmatch(
+                r'[a-z][a-z0-9]*,\s*(0x[0-9a-f]+|\d+)',
+                op
+            )
+
+            if not m:
+                continue
+
+            vals.add(
+                int(m.group(1),0)
+            )
+
+        return vals
+
+    type13=[]
+    type2=[]
+
+    for rva in validator_hits:
+        vals=_direct_cmp_immediates(rva)
+
+        # type 1/3:
+        # c265 jvb testa explicitamente 1 e 3.
+        if 1 in vals and 3 in vals:
+            type13.append(rva)
+            continue
+
+        # type 2:
+        # c265 jvc exige explicitamente STAGETYPE == 2.
+        if 2 in vals and 1 not in vals and 3 not in vals:
+            type2.append(rva)
+
+    if len(type13)==1:
+        out["jgc_type13"]=type13[0]
+
+    elif len(validator_hits)==1:
+        # Compatibilidade com builds antigas que tinham um unico
+        # validador StageCache.
+        out["jgc_type13"]=validator_hits[0]
+
+    else:
+        raise AssertionError(
+            "jgc type1/3 ambiguo: validators=%r classificados=%r"
+            %(validator_hits,type13)
+        )
+
+    if len(type2)==1:
+        out["jgc_type2"]=type2[0]
+
+    elif len(type2)>1:
+        raise AssertionError(
+            "jgc type2 ambiguo: %r"
+            %type2
+        )
     out["jgd"]=_a_pick(cal,"void",[SC,r'Action<bool>'],"jgd",pe,addrs)           # ACTBOSS (reserva a pedra)
     # cross-check: jgq tem a constante 1101 (Normal 1-1) hardcoded -> confirma o alvo
     if not any(i.mnemonic in ("cmp","mov") and (i.op_str or "").endswith("0x44d") for i in _a_dis(pe,addrs,out["jgq"])):
@@ -775,7 +1083,7 @@ def _data_anchors(ddir):
 # e nao estiverem aqui, o auto-fuse so nao AUTO-ABRE o cubo (degradacao graciosa) — o resto auto-resolve.
 _KNOWN_UI_HANDLERS={"c824ed7a2bb1":{"eby":0x839BB0,"hgr":0xC362A0}}
 
-_EXTRACT_VER=7   # BUMPAR sempre que a extracao mudar: invalida os caches antigos. Sem isso um offset
+_EXTRACT_VER=8   # BUMPAR sempre que a extracao mudar: invalida os caches antigos. Sem isso um offset
                  # errado fica gravado no disco e o fix nao chega em quem ja rodou o painel.
 _CRIT_SYMS=("gra","upd","llx","iw","ra_class","ilo","ipu","imx","inf","ili","iog","ioa","ima","iuw","izb","inv_slots_off","stash_off")
 def _offsets_ok(got):

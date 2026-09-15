@@ -20,6 +20,13 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
 
     private const int EvolveTarget = 4309;                 // TORMENT 3-9 (o 3-10 fica pro Auto-boss)
     private int _lastNav;                                   // último estágio p/ onde naveguei (anti-double-step)
+
+    // Estado da Evolution para detectar limpeza real da fase.
+    // Na build c265 o contador runtime não permanece em WaveAmount:
+    // foi observado ao vivo 3201 WaveAmount=26 fazendo 24 -> 0.
+    // Portanto o sinal confiável de clear é o wrap da wave.
+    private int _evolveObservedStage;
+    private int _evolveLastWave = -1;
     // (soulstone, boss x-10): Torment primeiro, depois Hell — igual ao Python.
     private static readonly (int ss, int boss)[] BossPairs = [(190004, 4310), (190003, 3310)];
     private static readonly string[] EnterResult = ["Success", "EndStage", "NeedSoulStone", "NeedChestSpace", "Failed"];
@@ -34,7 +41,7 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
 
     /// <summary>
     /// EVOLUÇÃO: SOBE UMA FASE POR VEZ pela corrente NextStageKey, no ritmo em que você LIMPA a fase atual
-    /// (wave >= WaveAmount), até Torment 3-9 — aí DESLIGA o modo sozinho. NÃO pula pro fim: o alvo é
+    /// (wave >= WaveAmount - 1; runtime é zero-based), até Torment 3-9 — aí DESLIGA o modo sozinho. NÃO pula pro fim: o alvo é
     /// Next(cur), não min(max,4309) (que teleportava porque a aba Stages fixa max=4310). x-10 no caminho =
     /// mata o boss e vai PRA FRENTE (Next do boss), nunca volta (senão re-entra o boss pra sempre).
     /// </summary>
@@ -54,10 +61,42 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
         var t = nav.StageTable();
         if (!t.TryGetValue(cur, out var info)) return false;
 
-        // PACING: só avança quando a fase ATUAL foi limpa (última wave). Sem isso viraria um "pulo lento".
-        // Anti-double-step: só considera limpo depois de ter navegado pra cá e a wave ter passado de 1.
-        if (!(info.Waves > 0 && wave >= info.Waves && (cur == _lastNav || _lastNav == 0)))
+        // PACING: a build c265 não mantém a última wave exposta por tempo suficiente
+        // para comparar com WaveAmount. Ao vivo, 3201 (WaveAmount=26) mostrou 24 -> 0.
+        //
+        // Portanto consideramos a fase limpa quando:
+        //   1) continuamos na MESMA StageKey;
+        //   2) já vimos progresso alto naquela fase;
+        //   3) a wave volta para 0/1.
+        //
+        // Mudança de StageKey reseta a observação e impede falso positivo causado
+        // pelo próprio GoToStage().
+        if (_evolveObservedStage != cur)
+        {
+            _evolveObservedStage = cur;
+            _evolveLastWave = wave;
             return false;
+        }
+
+        int previousWave = _evolveLastWave;
+        _evolveLastWave = wave;
+
+        // Exige ter chegado próximo do final da fase antes do reset.
+        // c265: WaveAmount=26, último valor observado=24.
+        int clearThreshold = Math.Max(2, info.Waves - 2);
+
+        bool stageCleared =
+            info.Waves > 0 &&
+            previousWave >= clearThreshold &&
+            wave <= 1;
+
+        if (!stageCleared)
+            return false;
+
+        Emit(
+            $"📈 evolução: clear detectado em {StageName(cur)} " +
+            $"por wrap de wave {previousWave}->{wave} (WaveAmount={info.Waves})"
+        );
 
         int next = info.Next;
         if (next <= 0 || next > EvolveTarget || !t.TryGetValue(next, out var nInfo)) return false;
@@ -76,13 +115,21 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
             if (!EnterBossWait(next, keep)) return false;
             // Depois do kill vai PRA FRENTE (Next do boss), nunca de volta -> escapa do loop do boss.
             int fwd = t.TryGetValue(next, out var bi) ? bi.Next : 0;
-            if (fwd > 0 && fwd <= EvolveTarget) { nav.GoToStage(fwd); _lastNav = fwd; }
+            if (fwd > 0 && fwd <= EvolveTarget)
+            {
+                nav.GoToStage(fwd);
+                _lastNav = fwd;
+                _evolveObservedStage = fwd;
+                _evolveLastWave = -1;
+            }
             return true;
         }
 
         Emit($"📈 evolução: {StageName(cur)} -> {StageName(next)} (nível {nInfo.Lvl})");
         nav.GoToStage(next);
         _lastNav = next;
+        _evolveObservedStage = next;
+        _evolveLastWave = -1;
         if (next >= EvolveTarget)
         {
             Emit("📈 evolução: cheguei em TORMENT 3-9 — climb completo, desligando o modo");

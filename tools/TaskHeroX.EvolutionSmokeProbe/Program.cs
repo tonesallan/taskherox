@@ -4,7 +4,7 @@ using TbhBot.Core.Game;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-const string ExpectedBuild = "139467f3ad72";
+const string ExpectedBuild = "c265dc8bc7aa";
 const int StartStage = 3309;
 const int BossStage = 3310;
 const int ExpectedForwardStage = 4101;
@@ -43,7 +43,7 @@ if (!table.TryGetValue(StartStage, out var startInfo) || startInfo.Type != 0 || 
     Console.WriteLine("[BLOCKED] HELL 3-9 não corresponde ao caminho normal esperado 3309 -> 3310.");
     return;
 }
-if (!table.TryGetValue(BossStage, out var bossInfo) || bossInfo.Type != 1 || bossInfo.Next != ExpectedForwardStage)
+if (!table.TryGetValue(BossStage, out var bossInfo) || bossInfo.Type != 1 || bossInfo.Next != ExpectedForwardStage || bossInfo.Ss != HellSoulStone)
 {
     Console.WriteLine("[BLOCKED] HELL 3-10 não corresponde ao caminho type=1 esperado 3310 -> 4101.");
     return;
@@ -74,10 +74,15 @@ Console.WriteLine($"3309: waves={startInfo.Waves} next={startInfo.Next}");
 Console.WriteLine($"3310: type={bossInfo.Type} next={bossInfo.Next} ss={bossInfo.Ss}");
 Console.WriteLine($"Hell soulstone={hellBefore} · ACTBOSS boxes={boxesBefore}");
 
-if (sources.RuntimeCur > 0 && sources.SaveCur > 0 && sources.RuntimeCur != sources.SaveCur)
+if (sources.RuntimeCur <= 0 || !table.ContainsKey(sources.RuntimeCur))
 {
-    Console.WriteLine("[BLOCKED] runtime/save discordam sobre a fase atual. Reinicie o jogo antes do smoke para partir de um estado consistente.");
+    Console.WriteLine($"[BLOCKED] runtime de estágio inválido: {sources.RuntimeCur}.");
     return;
+}
+
+if (sources.SaveCur > 0 && sources.RuntimeCur != sources.SaveCur)
+{
+    Console.WriteLine($"[INFO] runtime/save divergem ({sources.RuntimeCur}/{sources.SaveCur}); runtime será usado como fonte autoritativa.");
 }
 if (hellBefore <= 0)
 {
@@ -132,7 +137,7 @@ try
     Console.WriteLine("HELL 3-9 carregado no runtime. Aguardando última wave...");
 
     var clearWatch = Stopwatch.StartNew();
-    while (clearWatch.ElapsedMilliseconds < 180_000)
+    while (clearWatch.ElapsedMilliseconds < 240_000)
     {
         if (Volatile.Read(ref keepRunning) == 0 || !e.Target.IsAlive()) return;
         var p = e.Save.StageProgress();
@@ -142,7 +147,7 @@ try
             Console.WriteLine($"[FAIL] saiu de 3309 antes do trigger da Evolution; runtime={s.RuntimeCur} save={s.SaveCur}.");
             return;
         }
-        if (p.Wave >= startInfo.Waves)
+        if (p.Wave >= startInfo.Waves - 1)
         {
             waveAtTrigger = p.Wave;
             break;
@@ -150,13 +155,13 @@ try
         Thread.Sleep(50);
     }
 
-    if (waveAtTrigger < startInfo.Waves)
+    if (waveAtTrigger < startInfo.Waves - 1)
     {
         Console.WriteLine($"[FAIL] timeout aguardando limpeza de 3309; wave={e.Save.StageProgress().Wave}/{startInfo.Waves}.");
         return;
     }
 
-    Console.WriteLine($"wave pronta: {waveAtTrigger}/{startInfo.Waves}");
+    Console.WriteLine($"wave pronta: {waveAtTrigger}/{startInfo.Waves - 1} (WaveAmount={startInfo.Waves})");
     Console.WriteLine();
     Console.WriteLine("== Evolution one-shot ==");
     evolveResult = e.StageAutomation.Evolve(() => Volatile.Read(ref keepRunning) == 1 && e.Target.IsAlive());

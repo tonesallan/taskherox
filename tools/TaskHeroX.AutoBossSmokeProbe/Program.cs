@@ -3,7 +3,7 @@ using TbhBot.Core.Game;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-const string ExpectedBuild = "139467f3ad72";
+const string ExpectedBuild = "c265dc8bc7aa";
 const int HellSoulStone = 190003;
 const int TormentSoulStone = 190004;
 const int HellBoss = 3310;
@@ -36,7 +36,7 @@ if (!e.StageNav.CanValidateType1Entry || !e.StageNav.UsesSplitType1Validator)
 }
 
 var table = e.StageNav.StageTable();
-if (!table.TryGetValue(HellBoss, out var hellInfo) || hellInfo.Type != 1)
+if (!table.TryGetValue(HellBoss, out var hellInfo) || hellInfo.Type != 1 || hellInfo.Ss != HellSoulStone)
 {
     Console.WriteLine("[BLOCKED] stage 3310 não é type=1 nesta sessão.");
     return;
@@ -62,10 +62,15 @@ Console.WriteLine($"progresso: max={beforeProgress.Max} cur={beforeProgress.Cur}
 Console.WriteLine($"fontes: runtime cur={sources.RuntimeCur} wave={sources.RuntimeWave} · save cur={sources.SaveCur} wave={sources.SaveWave}");
 Console.WriteLine($"ACTBOSS boxes={boxesBefore}");
 
-if (sources.RuntimeCur > 0 && sources.SaveCur > 0 && sources.RuntimeCur != sources.SaveCur)
+if (sources.RuntimeCur <= 0 || !table.ContainsKey(sources.RuntimeCur))
 {
-    Console.WriteLine("[BLOCKED] runtime/save discordam sobre a fase atual. Reinicie o jogo antes do smoke para não testar em estado de transição inconsistente.");
+    Console.WriteLine($"[BLOCKED] runtime de estágio inválido: {sources.RuntimeCur}.");
     return;
+}
+
+if (sources.SaveCur > 0 && sources.RuntimeCur != sources.SaveCur)
+{
+    Console.WriteLine($"[INFO] runtime/save divergem ({sources.RuntimeCur}/{sources.SaveCur}); runtime será usado como fonte autoritativa.");
 }
 if (tormentBefore != 0)
 {

@@ -20,26 +20,38 @@ public sealed class StageNav(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
     private readonly RealDispatcher _disp = disp;
     public Action<string>? Log;
 
-    // Build 139467f3ad72: o antigo jgc foi dividido. O candidate-A abaixo foi validado AO VIVO apenas
+    // Builds 139467f3ad72 e c265dc8bc7aa: o antigo jgc foi dividido. O candidate-A abaixo foi validado AO VIVO apenas
     // para STAGETYPE=1: Success(0) e NeedSoulStone(2), sem consumo de soulstone nem mudança de max/cur.
     // Não reutilizamos a chave ambígua "jgc" e NÃO habilitamos type=2/type=3 por inferência.
-    private const long SplitType1ValidatorRva = 0x99E5E0;
-
-    // Guard de build por tuple de símbolos estruturais. Todos estes valores pertencem à build
-    // 139467f3ad72; se qualquer um mudar, o split validator fica automaticamente indisponível.
-    private bool HasValidatedSplitType1Route =>
+    private bool IsValidatedBuild139467 =>
         _sym.Get("uo_ti") == 0x5F4C658 &&
         _sym.Get("stage_off") == 0x88 &&
         _sym.Get("jgk") == 0x9A01A0 &&
         _sym.Get("jgd") == 0x99E9E0;
 
+    private bool IsValidatedBuildC265 =>
+        _sym.Get("uo_ti") == 0x5F5C9C8 &&
+        _sym.Get("stage_off") == 0x88 &&
+        _sym.Get("jgk") == 0x9ABC50 &&
+        _sym.Get("jgd") == 0x9AA370;
+
+    private long SplitType1ValidatorRva =>
+        IsValidatedBuild139467 ? 0x99E5E0 :
+        IsValidatedBuildC265   ? 0x9A9F20 :
+        0;
+
+    // Guard de build por tuple de símbolos estruturais. Todos estes valores pertencem à build
+    // 139467f3ad72; se qualquer um mudar, o split validator fica automaticamente indisponível.
+    private bool HasValidatedSplitType1Route =>
+        SplitType1ValidatorRva != 0;
+
     /// <summary>
     /// True quando existe uma rota validada para checar entrada de boss STAGETYPE=1.
-    /// Builds antigas continuam usando jgc; a build 139467f3ad72 usa somente o candidate-A validado.
+    /// Builds antigas continuam usando jgc; builds split validadas usam somente o candidate-A correspondente.
     /// </summary>
     public bool CanValidateType1Entry => _sym.Get("jgc") != 0 || HasValidatedSplitType1Route;
 
-    /// <summary>True somente quando a sessão usa a rota split validada da build 139467f3ad72.</summary>
+    /// <summary>True somente quando a sessão usa uma rota split type=1 previamente validada.</summary>
     public bool UsesSplitType1Validator => _sym.Get("jgc") == 0 && HasValidatedSplitType1Route;
 
     // A tabela de estágios é estática no jogo -> cacheia depois de ler cheia (>=100 keys, como o Python).
@@ -135,7 +147,7 @@ public sealed class StageNav(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
     /// <summary>
     /// Valida se um stage pode ser acessado. Builds antigas usam jgc:
     /// 0=Success, 1=EndStage, 2=NeedSoulStone, 3=NeedChestSpace, 4=Failed.
-    /// Na build 139467f3ad72 o antigo jgc foi dividido; TaskHeroX usa o candidate-A somente para type=1,
+    /// Nas builds 139467f3ad72 e c265dc8bc7aa o antigo jgc está dividido; TaskHeroX usa o candidate-A somente para type=1,
     /// pois Success(0) e NeedSoulStone(2) foram validados ao vivo sem efeitos de gameplay observados.
     /// Type=2/type=3 continuam sem rota split exposta. null = rota não validada / key inexistente.
     /// </summary>
@@ -165,12 +177,27 @@ public sealed class StageNav(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
     {
         long jgd = _sym.Get("jgd"), jgk = _sym.Get("jgk");
         if (jgd == 0 || jgk == 0) return false;
+
         nint c = StageCache(key);
         if (c == 0) return false;
 
-        _disp.Command(13, c);                                   // cmd13 = jgd(cache,FAKE): marca o retorno + reserva a pedra
-        Thread.Sleep(150);                                      // deixa o jgd assentar antes do jgk (mesma folga do Python)
-        _disp.Call((long)(Base + (nint)jgk), (nint)key);        // o que o callback do clique faria
+        bool callbackDrivenC265 =
+            _sym.Get("uo_ti") == 0x5F5C9C8 &&
+            _sym.Get("stage_off") == 0x88 &&
+            _sym.Get("jgd") == 0x9AA370 &&
+            _sym.Get("jgk") == 0x9ABC50;
+
+        if (callbackDrivenC265)
+        {
+            // cmd13 cria/reutiliza o Action<bool> real do StageNode e
+            // jvd chama hzs(true), que por sua vez chama jgk.
+            return _disp.Command(13, c);
+        }
+
+        // Builds antigos preservam a rota já validada.
+        _disp.Command(13, c);
+        Thread.Sleep(150);
+        _disp.Call((long)(Base + (nint)jgk), (nint)key);
         return true;
     }
 }
