@@ -1,7 +1,11 @@
+using Microsoft.Win32;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using TbhBot.App.Services;
+using TbhBot.Core.Diagnostics;
 
 namespace TbhBot.App.Views;
 
@@ -14,6 +18,7 @@ public sealed class CompatibilityWindow : Window
     private readonly EngineService _svc;
     private readonly Dictionary<string, TextBlock> _values = new(StringComparer.Ordinal);
     private readonly Button _refresh;
+    private readonly Button _export;
     private readonly TextBlock _summary;
 
     public CompatibilityWindow(EngineService svc)
@@ -33,6 +38,7 @@ public sealed class CompatibilityWindow : Window
 
         var head = new Grid { Margin = new Thickness(0, 0, 0, 18) };
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var title = new StackPanel();
@@ -55,6 +61,18 @@ public sealed class CompatibilityWindow : Window
         Grid.SetColumn(title, 0);
         head.Children.Add(title);
 
+        _export = new Button
+        {
+            Content = "EXPORT BUNDLE",
+            Style = (Style)Application.Current.FindResource("Accent.Button"),
+            Padding = new Thickness(16, 8, 16, 8),
+            Margin = new Thickness(0, 0, 10, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        _export.Click += async (_, _) => await ExportSupportBundleAsync();
+        Grid.SetColumn(_export, 1);
+        head.Children.Add(_export);
+
         _refresh = new Button
         {
             Content = "REFRESH",
@@ -63,7 +81,7 @@ public sealed class CompatibilityWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         _refresh.Click += async (_, _) => await RefreshAsync();
-        Grid.SetColumn(_refresh, 1);
+        Grid.SetColumn(_refresh, 2);
         head.Children.Add(_refresh);
         DockPanel.SetDock(head, Dock.Top);
         root.Children.Add(head);
@@ -111,7 +129,7 @@ public sealed class CompatibilityWindow : Window
 
         var note = new TextBlock
         {
-            Text = "Compatibility Center é somente-leitura. Um item verde significa que a rota foi validada nesta sessão; não significa que builds futuros serão automaticamente compatíveis.",
+            Text = "Compatibility Center é somente-leitura. EXPORT BUNDLE cria um JSON de suporte com schema versionado e remove caminhos de usuário, Steam IDs e e-mails do log antes de salvar.",
             Foreground = B("Subtle"),
             FontSize = 11,
             TextWrapping = TextWrapping.Wrap,
@@ -203,7 +221,7 @@ public sealed class CompatibilityWindow : Window
                 Set("gate-editor", "BLOCKED", false);
                 Set("gate-save", "BLOCKED", false);
                 Set("gate-stage-entry", "BLOCKED", false);
-                _summary.Text = "Abra o Taskbar Hero e aguarde o TaskHeroX conectar para executar o diagnóstico.";
+                _summary.Text = "Abra o Taskbar Hero e aguarde o TaskHeroX conectar para executar o diagnóstico. O Support Bundle ainda pode ser exportado offline.";
                 return;
             }
 
@@ -250,6 +268,49 @@ public sealed class CompatibilityWindow : Window
         finally
         {
             _refresh.IsEnabled = true;
+        }
+    }
+
+    private async Task ExportSupportBundleAsync()
+    {
+        _export.IsEnabled = false;
+        try
+        {
+            DateTimeOffset createdUtc = DateTimeOffset.UtcNow;
+            string version = typeof(CompatibilityWindow).Assembly.GetName().Version?.ToString(3) ?? "unknown";
+            IReadOnlyList<string> logTail = EngineService.ReadSessionLogTail();
+
+            var bundle = await Task.Run(() => SupportBundleCollector.Collect(
+                _svc.Engine,
+                version,
+                logTail,
+                createdUtc));
+            string json = SupportBundleSerializer.Serialize(bundle);
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Export TaskHeroX Support Bundle",
+                FileName = $"TaskHeroX-support-{DateTime.Now:yyyyMMdd-HHmmss}.json",
+                DefaultExt = ".json",
+                AddExtension = true,
+                Filter = "TaskHeroX support bundle (*.json)|*.json|JSON (*.json)|*.json",
+            };
+
+            if (dialog.ShowDialog(this) != true) return;
+
+            await File.WriteAllTextAsync(dialog.FileName, json, new UTF8Encoding(false));
+            string name = Path.GetFileName(dialog.FileName);
+            _summary.Text = $"Support Bundle exportado: {name}";
+            _svc.RaiseLog($"support bundle exportado ({name})");
+        }
+        catch (Exception ex)
+        {
+            _summary.Text = $"Falha ao exportar Support Bundle: {ex.GetType().Name}: {ex.Message}";
+            _svc.RaiseLog($"support bundle falhou: {ex.GetType().Name}");
+        }
+        finally
+        {
+            _export.IsEnabled = true;
         }
     }
 
