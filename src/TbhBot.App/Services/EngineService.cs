@@ -114,17 +114,43 @@ public sealed class EngineService
 
     public void RaiseLog(string msg) { LogToFile(msg); Post(() => Log?.Invoke(msg)); }
 
-    // Histórico da sessão do TaskHeroX em %APPDATA%/TaskHeroX/session.log.
     private static readonly object _logLock = new();
+
+    /// <summary>Arquivo de histórico da sessão do TaskHeroX.</summary>
+    public static string SessionLogPath => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "TaskHeroX",
+        "session.log");
+
+    /// <summary>
+    /// Retorna apenas o final do log para diagnóstico. Falhas de leitura são best-effort e nunca
+    /// interferem no trainer. A redação de dados pessoais é aplicada pelo SupportBundle antes do export.
+    /// </summary>
+    public static IReadOnlyList<string> ReadSessionLogTail(int maxLines = 100)
+    {
+        if (maxLines <= 0) return [];
+        try
+        {
+            lock (_logLock)
+            {
+                if (!System.IO.File.Exists(SessionLogPath)) return [];
+                return System.IO.File.ReadLines(SessionLogPath).TakeLast(maxLines).ToArray();
+            }
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
     private static void LogToFile(string msg)
     {
         try
         {
-            string dir = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TaskHeroX");
+            string dir = System.IO.Path.GetDirectoryName(SessionLogPath)!;
             System.IO.Directory.CreateDirectory(dir);
             lock (_logLock)
-                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "session.log"),
+                System.IO.File.AppendAllText(SessionLogPath,
                     $"{DateTime.Now:HH:mm:ss}  {msg}{Environment.NewLine}");
         }
         catch { }

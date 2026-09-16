@@ -1,4 +1,6 @@
 using System.Text;
+using TbhBot.Core;
+using TbhBot.Core.Diagnostics;
 using TbhBot.Core.Game;
 using TbhBot.Core.Il2Cpp;
 using TbhBot.Core.Update;
@@ -104,5 +106,59 @@ public class CoreTests
         Assert.True(AutoUpdate.CompareVersions("v0.2.0", "0.1.0") > 0);
         Assert.Equal(0, AutoUpdate.CompareVersions("v1.0.0", "1.0.0"));
         Assert.True(AutoUpdate.CompareVersions("1.0.0", "1.1.0") < 0);
+    }
+
+    [Fact]
+    public void SupportBundleCollector_Offline_IsBestEffortAndDeterministic()
+    {
+        using var engine = new Engine();
+        var at = new DateTimeOffset(2026, 9, 16, 1, 30, 0, TimeSpan.Zero);
+
+        var bundle = SupportBundleCollector.Collect(
+            engine,
+            "0.1.1",
+            [@"01:29:59  cache C:\Users\TONES\AppData\Roaming\TaskHeroX"],
+            at);
+
+        Assert.Equal(SupportBundleCollector.SchemaVersion, bundle.SchemaVersion);
+        Assert.Equal(at, bundle.CreatedUtc);
+        Assert.False(bundle.Game.Attached);
+        Assert.Equal("not-loaded", bundle.Offsets.Source);
+        Assert.Equal(25, bundle.Compatibility.Stats.Length);
+        Assert.All(bundle.Compatibility.Stats, s => Assert.False(s.Readable));
+        Assert.DoesNotContain("TONES", bundle.LogTail.Single());
+    }
+
+    [Fact]
+    public void SupportBundleRedactor_RemovesPersonalIdentifiers()
+    {
+        const string input = @"C:\Users\TONES\Desktop\x.txt steamid=123456 email tones@example.com 76561198012345678";
+
+        string redacted = SupportBundleRedactor.RedactText(input);
+
+        Assert.DoesNotContain("TONES", redacted);
+        Assert.DoesNotContain("123456", redacted);
+        Assert.DoesNotContain("tones@example.com", redacted);
+        Assert.DoesNotContain("76561198012345678", redacted);
+        Assert.Contains("<redacted>", redacted);
+        Assert.Contains("<email-redacted>", redacted);
+        Assert.Contains("<steam-id-redacted>", redacted);
+    }
+
+    [Fact]
+    public void SupportBundleSerializer_UsesStableSchemaField()
+    {
+        using var engine = new Engine();
+        var bundle = SupportBundleCollector.Collect(
+            engine,
+            "0.1.1",
+            [],
+            new DateTimeOffset(2026, 9, 16, 1, 30, 0, TimeSpan.Zero));
+
+        string json = SupportBundleSerializer.Serialize(bundle);
+
+        Assert.Contains("\"schemaVersion\": \"taskherox.support-bundle/v1\"", json);
+        Assert.Contains("\"version\": \"0.1.1\"", json);
+        Assert.Contains("\"createdUtc\": \"2026-09-16T01:30:00+00:00\"", json);
     }
 }
