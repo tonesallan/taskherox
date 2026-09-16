@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Threading;
-using TbhBot.Core.Market;
+using TaskHeroX.Core.Market;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Security.Cryptography;

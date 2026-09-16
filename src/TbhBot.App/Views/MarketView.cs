@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using TbhBot.App.Services;
-using TbhBot.Core.Market;
+using TaskHeroX.Core.Market;
 
 namespace TbhBot.App.Views;
 

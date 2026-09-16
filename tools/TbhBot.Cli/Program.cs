@@ -417,7 +417,7 @@ if (args.Contains("--rcspam"))
 // Teste do índice de preços do overlay (não precisa do jogo): índice embutido + lookups exato/fuzzy/grade.
 if (args.Contains("--priceidx"))
 {
-    var idx = new TbhBot.Core.Market.PriceIndex();
+    var idx = new TaskHeroX.Core.Market.PriceIndex();
     Console.WriteLine($"[{(idx.Count > 100 ? "PASS" : "FAIL")}] PriceIndex: {idx.Count} bases");
     foreach (var (name, grade) in new[] { ("Void Opal", "Beyond"), ("void opl", "Beyond"), ("Minor Ruby", "Common"), ("Diamond", "Immortal"), ("Dragon Heart", "Legendary") })
     {

@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace TbhBot.Core.Market;
+namespace TaskHeroX.Core.Market;
 
 /// <summary>
 /// Busca preco de itens do Steam Community Market (endpoint priceoverview) para o

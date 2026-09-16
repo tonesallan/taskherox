@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace TbhBot.Core.Market;
+namespace TaskHeroX.Core.Market;
 
 /// <summary>
 /// Índice de preços para o OVERLAY (porta de load_index/resolve_base/price_of do tbh_overlay.py).
