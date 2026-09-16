@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using TbhBot.Core.Native;
+using TaskHeroX.Core.Native;
 
 namespace TbhBot.Core.Memory;
 

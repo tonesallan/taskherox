@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace TbhBot.Core.Native;
+namespace TaskHeroX.Core.Native;
 
 /// <summary>
 /// P/Invoke fino para ler/escrever a memória de outro processo (kernel32).

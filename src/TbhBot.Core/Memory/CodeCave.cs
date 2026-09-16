@@ -1,4 +1,4 @@
-using TbhBot.Core.Native;
+using TaskHeroX.Core.Native;
 
 namespace TbhBot.Core.Memory;
 
