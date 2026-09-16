@@ -40,8 +40,9 @@ public sealed class StageAutomation(StageNav nav, SaveData save, AutoBox box, In
     private static string Enter(int? r) => r is >= 0 and <= 4 ? EnterResult[r.Value] : $"r={r}";
 
     /// <summary>
-    /// EVOLUÇÃO: SOBE UMA FASE POR VEZ pela corrente NextStageKey, no ritmo em que você LIMPA a fase atual
-    /// (wave >= WaveAmount - 1; runtime é zero-based), até Torment 3-9 — aí DESLIGA o modo sozinho. NÃO pula pro fim: o alvo é
+    /// EVOLUÇÃO: SOBE UMA FASE POR VEZ pela corrente NextStageKey, no ritmo em que você LIMPA a fase atual.
+    /// Na build atual, o clear é detectado pelo wrap da wave após progresso próximo ao fim da fase.
+    /// Segue até Torment 3-9 — aí DESLIGA o modo sozinho. NÃO pula pro fim: o alvo é
     /// Next(cur), não min(max,4309) (que teleportava porque a aba Stages fixa max=4310). x-10 no caminho =
     /// mata o boss e vai PRA FRENTE (Next do boss), nunca volta (senão re-entra o boss pra sempre).
     /// </summary>

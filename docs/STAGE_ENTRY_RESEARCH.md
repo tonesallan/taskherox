@@ -1,10 +1,10 @@
-# Stage-entry research (build 139467f3ad72)
+# Stage-entry research — legacy 139467f3ad72 and current c265dc8bc7aa
 
 ## Status
 
 The old single `jgc(StageCache)` route split in build `139467f3ad72`.
 
-For the scope actually used by TaskHeroX, candidate A (RVA `0x99E5E0`) has now been validated live for `STAGETYPE=1` on the current build:
+For the legacy build `139467f3ad72`, candidate A (RVA `0x99E5E0`) was validated live for `STAGETYPE=1`:
 
 - `Success(0)` confirmed on stage `3310` with available Hell soulstones and free capacity;
 - `NeedSoulStone(2)` confirmed twice on stage `4310` with zero Torment soulstones;
@@ -131,11 +131,37 @@ dotnet run --project tools\TaskHeroX.StageEntrySemanticProbe -- --success --prod
 
 The semantic probe still refuses the wrong build, checks type/resource/capacity preconditions, calls only the validator once, removes the dispatcher hook in `finally`, and compares resource plus max/cur state before/after.
 
-## Remaining validation before merge
+## Current build validation (`c265dc8bc7aa`)
 
-1. CI build/test green on the final PR head.
-2. Local build/test green.
-3. Production-route semantic probe returns the same `NeedSoulStone(2)` / `Success(0)` results.
-4. Final controlled AutoBoss/Evolution smoke test confirms the existing automation path operates correctly with the typed validator.
+The current build was re-extracted and validated independently.
 
-Candidate B/type `2` can remain unresolved in this phase because current AutoBoss/Evolution do not use it.
+Resolved runtime stage fields:
+
+- `uo_max = 0x50`
+- `uo_cur = 0x80`
+- `uo_wave = 0x90`
+- `uo_cur_cache = 0xA8`
+
+Resolved stage-entry validators:
+
+- type 1/3 validator = `0x9A9F20`
+- type 2 validator = `0x9AA0C0`
+- boss entry callback path `jgd = 0x9AA370`
+
+The extractor was upgraded to V8 so these fields are resolved semantically instead of by static-field position. The generated cache for `c265dc8bc7aa` reproduces the validated runtime offsets and does not emit a generic `jgc`.
+
+## Final validation status
+
+Completed successfully:
+
+- direct `NeedSoulStone(2)` semantic probe;
+- direct `Success(0)` semantic probe;
+- production-route stage-entry probe;
+- AutoBoss production smoke;
+- Evolution production smoke;
+- local E2E: `19 PASS / 0 FAIL`;
+- unit tests: `21 / 21`;
+- solution build;
+- GitHub Actions `TaskHeroX CI #65`.
+
+Candidate B/type `2` remains outside the production route because current AutoBoss/Evolution do not require it.
