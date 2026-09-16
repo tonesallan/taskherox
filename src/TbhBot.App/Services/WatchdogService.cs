@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Windows;
-using TbhBot.Core.Memory;
+using TaskHeroX.Core.Memory;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Security.Cryptography;

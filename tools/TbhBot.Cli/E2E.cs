@@ -138,7 +138,7 @@ internal static class E2E
     }
 
     private static async Task<bool> WaitForByteAsync(
-        TbhBot.Core.Memory.MemoryAccess memory,
+        TaskHeroX.Core.Memory.MemoryAccess memory,
         nint address,
         byte expected,
         TimeSpan timeout)

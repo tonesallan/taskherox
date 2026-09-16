@@ -1,5 +1,5 @@
 using Iced.Intel;
-using TbhBot.Core.Memory;
+using TaskHeroX.Core.Memory;
 
 namespace TbhBot.Core.Il2Cpp;
 

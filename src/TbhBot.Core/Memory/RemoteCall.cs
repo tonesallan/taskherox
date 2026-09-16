@@ -1,6 +1,6 @@
 using TaskHeroX.Core.Native;
 
-namespace TbhBot.Core.Memory;
+namespace TaskHeroX.Core.Memory;
 
 /// <summary>
 /// Chamada de função do jogo numa THREAD REMOTA (porta de _remote_call/_export do tbh_core.py).

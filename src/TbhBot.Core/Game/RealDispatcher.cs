@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Iced.Intel;
 using TbhBot.Core.Il2Cpp;
-using TbhBot.Core.Memory;
+using TaskHeroX.Core.Memory;
 
 namespace TbhBot.Core.Game;
 

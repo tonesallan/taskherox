@@ -1,6 +1,6 @@
 using TaskHeroX.Core.Native;
 
-namespace TbhBot.Core.Memory;
+namespace TaskHeroX.Core.Memory;
 
 /// <summary>
 /// Aloca uma code-cave RWX de 0x1000 bytes perto de 'near' (dentro de +-0x7ff00000, alcance de um jmp rel32).

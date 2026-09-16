@@ -5,7 +5,7 @@ using TbhBot.Core;
 using TaskHeroX.Core.Diagnostics;
 using TbhBot.Core.Game;
 using TbhBot.Core.Il2Cpp;
-using TbhBot.Core.Memory;
+using TaskHeroX.Core.Memory;
 using TaskHeroX.Core.Update;
 
 namespace TbhBot.Tests;

@@ -231,7 +231,7 @@ if (args.Contains("--attach-regress"))
     Process Spawn(int atraso) => Process.Start(new ProcessStartInfo(fakeExe, $"--fake-game {atraso}")
     { WorkingDirectory = dir, UseShellExecute = false, CreateNoWindow = true })!;
 
-    var alvo = new TbhBot.Core.Memory.ProcessTarget();
+    var alvo = new TaskHeroX.Core.Memory.ProcessTarget();
     bool bug = false;
 
     Console.WriteLine("1) jogo falso A (carrega o modulo na hora)");
@@ -559,7 +559,7 @@ if (args.Contains("--klass"))
     var eng = new TbhBot.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
-    long ex = TbhBot.Core.Memory.RemoteCall.ResolveExport(eng.Memory, "il2cpp_class_from_name");
+    long ex = TaskHeroX.Core.Memory.RemoteCall.ResolveExport(eng.Memory, "il2cpp_class_from_name");
     Console.WriteLine($"[{(ex != 0 ? "PASS" : "FAIL")}] export il2cpp_class_from_name = 0x{ex:X}");
     var api = new TbhBot.Core.Game.Il2CppApi(eng.Memory);
     long sb = api.ClassFromName("TaskbarHero.UI", "StageBox");

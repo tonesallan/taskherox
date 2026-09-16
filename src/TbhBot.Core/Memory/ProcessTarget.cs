@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using TaskHeroX.Core.Native;
 
-namespace TbhBot.Core.Memory;
+namespace TaskHeroX.Core.Memory;
 
 /// <summary>
 /// Acha o processo do jogo, abre um handle com direitos de leitura/escrita e resolve a base do

@@ -1,6 +1,6 @@
 using TaskHeroX.Core.Native;
 
-namespace TbhBot.Core.Memory;
+namespace TaskHeroX.Core.Memory;
 
 /// <summary>
 /// Scanner de AOB e enumerador de regioes de memoria.

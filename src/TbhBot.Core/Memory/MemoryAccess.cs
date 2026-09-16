@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using TaskHeroX.Core.Native;
 
-namespace TbhBot.Core.Memory;
+namespace TaskHeroX.Core.Memory;
 
 /// <summary>
 /// Camada de leitura/escrita de memória.
