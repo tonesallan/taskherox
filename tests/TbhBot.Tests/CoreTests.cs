@@ -1,8 +1,11 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using TbhBot.Core;
 using TbhBot.Core.Diagnostics;
 using TbhBot.Core.Game;
 using TbhBot.Core.Il2Cpp;
+using TbhBot.Core.Memory;
 using TbhBot.Core.Update;
 
 namespace TbhBot.Tests;
@@ -130,6 +133,35 @@ public class CoreTests
     }
 
     [Fact]
+    public void SupportBundleCollector_StaleAttachWithDeadProcess_ReportsOffline()
+    {
+        var engine = new Engine();
+
+        SetBackingField(engine.Target, "Handle", (nint)1);
+        SetBackingField(engine.Target, "ProcessId", int.MaxValue);
+        SetBackingField(engine.Target, "ModuleBase", (nint)0x1234);
+        SetBackingField(engine.Target, "ModuleSize", 4096);
+        SetBackingField(engine.Target, "ModulePath", @"C:\Games\TaskBarHero\GameAssembly.dll");
+        SetBackingField(engine, "Memory", (MemoryAccess)RuntimeHelpers.GetUninitializedObject(typeof(MemoryAccess)));
+
+        Assert.True(engine.IsAttached);
+        Assert.False(engine.Target.IsAlive());
+
+        var bundle = SupportBundleCollector.Collect(
+            engine,
+            "0.1.1",
+            [],
+            new DateTimeOffset(2026, 9, 16, 1, 31, 0, TimeSpan.Zero));
+
+        Assert.False(bundle.Game.Attached);
+        Assert.Null(bundle.Game.ProcessId);
+        Assert.Null(bundle.Game.ModuleBase);
+        Assert.Null(bundle.Game.ModuleSize);
+        Assert.Equal(0, bundle.Compatibility.ReadableStats);
+        Assert.All(bundle.Compatibility.Stats, s => Assert.False(s.Readable));
+    }
+
+    [Fact]
     public void SupportBundleRedactor_RemovesPersonalIdentifiers()
     {
         const string input = @"C:\Users\TONES\Desktop\x.txt steamid=123456 email tones@example.com 76561198012345678";
@@ -160,5 +192,13 @@ public class CoreTests
         Assert.Contains("\"schemaVersion\": \"taskherox.support-bundle/v1\"", json);
         Assert.Contains("\"version\": \"0.1.1\"", json);
         Assert.Contains("\"createdUtc\": \"2026-09-16T01:30:00+00:00\"", json);
+    }
+
+    private static void SetBackingField<TTarget, TValue>(TTarget target, string propertyName, TValue value)
+        where TTarget : class
+    {
+        var field = typeof(TTarget).GetField($"<{propertyName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        field.SetValue(target, value);
     }
 }
