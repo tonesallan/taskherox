@@ -33,9 +33,9 @@ if (args.Contains("--verify-embedded"))
 // Auto-update do PAINEL: consulta o GitHub e mostra o que o banner mostraria (não baixa nada).
 if (args.Contains("--update-check"))
 {
-    var up = new TbhBot.Core.Update.AutoUpdate();
-    var cur = TbhBot.Core.Update.AutoUpdate.CurrentVersion;
-    Console.WriteLine($"versão deste build : {cur}   (repo {TbhBot.Core.Update.AutoUpdate.Repo})");
+    var up = new TaskHeroX.Core.Update.AutoUpdate();
+    var cur = TaskHeroX.Core.Update.AutoUpdate.CurrentVersion;
+    Console.WriteLine($"versão deste build : {cur}   (repo {TaskHeroX.Core.Update.AutoUpdate.Repo})");
     var (av, tag, url) = await up.CheckAsync(cur);
     Console.WriteLine($"release mais nova  : {(tag.Length > 0 ? tag : "(não consultou / sem tag)")}");
     Console.WriteLine($"tem update?        : {av}");
@@ -56,8 +56,8 @@ if (args.Contains("--feed"))
         if (!e0.Attach()) { Console.WriteLine("passe o hash: --feed <hash> (ou abra o jogo)"); return; }
         fh = e0.BuildHash;
     }
-    Console.WriteLine($"buscando {TbhBot.Core.Update.OffsetsFeed.BaseUrl}/offsets_{fh}.json");
-    var got = await TbhBot.Core.Update.OffsetsFeed.TryFetchAsync(fh!);
+    Console.WriteLine($"buscando {TaskHeroX.Core.Update.OffsetsFeed.BaseUrl}/offsets_{fh}.json");
+    var got = await TaskHeroX.Core.Update.OffsetsFeed.TryFetchAsync(fh!);
     Console.WriteLine(got is null
         ? "[FAIL] não achou/não validou (build ainda não publicado no feed, ou sem rede)"
         : $"[PASS] salvo em {got}");

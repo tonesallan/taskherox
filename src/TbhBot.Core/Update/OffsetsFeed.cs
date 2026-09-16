@@ -1,4 +1,4 @@
-namespace TbhBot.Core.Update;
+namespace TaskHeroX.Core.Update;
 
 /// <summary>
 /// Busca os offsets de um build de jogo DESCONHECIDO direto do repo (pasta <c>offsets/</c> no main).
@@ -48,7 +48,7 @@ public static class OffsetsFeed
 
             // Só grava se carregar, for de um extrator ATUAL (_ver) e trouxer os símbolos que importam.
             // Sem o requireVersion, um json antigo publicado no feed viraria cache tóxico permanente.
-            var probe = new Il2Cpp.SymbolTable();
+            var probe = new TbhBot.Core.Il2Cpp.SymbolTable();
             using (var ms = new MemoryStream(body))
                 if (!probe.LoadOffsetsJson(ms, requireVersion: true)) return null;
             if (!probe.Has("gra") || !probe.Has("uo_ti")) return null;

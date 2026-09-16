@@ -78,7 +78,7 @@ public sealed class EngineService
 
     private async Task FetchOffsetsAsync(string hash, CancellationToken ct)
     {
-        var path = await TbhBot.Core.Update.OffsetsFeed.TryFetchAsync(hash, ct).ConfigureAwait(false);
+        var path = await TaskHeroX.Core.Update.OffsetsFeed.TryFetchAsync(hash, ct).ConfigureAwait(false);
         if (path is null || ct.IsCancellationRequested) return;
         if (Engine.LoadOffsetsFrom(path)) Post(() => StateChanged?.Invoke());
     }

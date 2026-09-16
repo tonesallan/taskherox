@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 
-namespace TbhBot.Core.Update;
+namespace TaskHeroX.Core.Update;
 
 /// <summary>
 /// Auto-update via GitHub Releases.

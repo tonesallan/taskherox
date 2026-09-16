@@ -5,7 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using TbhBot.App.Services;
 using TbhBot.App.Views;
-using TbhBot.Core.Update;
+using TaskHeroX.Core.Update;
 
 namespace TbhBot.App;
 
