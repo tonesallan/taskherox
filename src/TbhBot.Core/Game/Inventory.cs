@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TbhBot.Core.Il2Cpp;
+using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
 namespace TbhBot.Core.Game;

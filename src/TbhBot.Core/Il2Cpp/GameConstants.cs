@@ -1,4 +1,4 @@
-namespace TbhBot.Core.Il2Cpp;
+namespace TaskHeroX.Core.Il2Cpp;
 
 // Offsets CONSTANTES (estaveis entre updates de codigo). Transcrito FIEL do tbh_core.py (linhas 202-237).
 // Erro aqui quebra tudo -> cada hex confere contra o Python.

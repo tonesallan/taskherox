@@ -7,7 +7,7 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 // Diagnóstico: --verify-offsets <path.json> carrega um cache de offsets e imprime símbolos-chave (sem jogo).
 if (args.Length >= 2 && args[0] == "--verify-offsets")
 {
-    var st = new TbhBot.Core.Il2Cpp.SymbolTable();
+    var st = new TaskHeroX.Core.Il2Cpp.SymbolTable();
     bool ok = st.LoadOffsetsJson(args[1]);
     Console.WriteLine($"LoadOffsetsJson = {ok}   ynj=[{string.Join(",", st.Ynj)}]   invClass={st.InvClass}");
     foreach (var k in new[] { "gra", "upd", "llx", "uo_ti", "uo_max", "uo_cur", "uo_wave", "inv_klass_ti", "inv_list_off", "PlayerSaveData.RuneSaveData", "cube_slot" })
@@ -23,7 +23,7 @@ if (args.Contains("--verify-embedded"))
     Console.WriteLine("recursos embutidos: " + (names.Length == 0 ? "(nenhum)" : string.Join(", ", names)));
     var res = System.Array.Find(names, n => n.EndsWith("json", StringComparison.OrdinalIgnoreCase));
     if (res is null) { Console.WriteLine("[FAIL] nenhum offsets_*.json embutido"); return; }
-    var st = new TbhBot.Core.Il2Cpp.SymbolTable();
+    var st = new TaskHeroX.Core.Il2Cpp.SymbolTable();
     using var s = asm.GetManifestResourceStream(res);
     bool ok = s is not null && st.LoadOffsetsJson(s);
     Console.WriteLine($"[{(ok && st.Get("uo_max") == 0x50 ? "PASS" : "FAIL")}] load embutido={ok}  uo_max=0x{st.Get("uo_max"):X}  gra=0x{st.Get("gra"):X}  ynj[0]=0x{(st.Ynj.Count > 0 ? st.Ynj[0] : 0):X}  invClass={st.InvClass}");
@@ -321,9 +321,9 @@ if (args.Contains("--godsite"))
     var ge = new TbhBot.Core.Engine();
     if (!ge.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     nint b = ge.Target.ModuleBase;
-    nint velho = ge.Scanner.FindAob(TbhBot.Core.Il2Cpp.GameConstants.AobGodmode);
+    nint velho = ge.Scanner.FindAob(TaskHeroX.Core.Il2Cpp.GameConstants.AobGodmode);
     nint novo = 0;
-    foreach (nint t in ge.Scanner.FindAllAob(TbhBot.Core.Il2Cpp.GameConstants.AobGodmodeTail))
+    foreach (nint t in ge.Scanner.FindAllAob(TaskHeroX.Core.Il2Cpp.GameConstants.AobGodmodeTail))
     {
         byte[] p = ge.Memory!.ReadBytes(t - 1, 1);
         if (p.Length == 1 && (p[0] == 0x57 || p[0] == 0xC3)) { novo = t - 1; break; }
@@ -573,7 +573,7 @@ if (args.Contains("--dispatch"))
     var eng = new TbhBot.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
-    Console.WriteLine($"attach pid={eng.Target.ProcessId}  hash={TbhBot.Core.Il2Cpp.BuildInfo.DllHash(eng.Target.ModulePath)}");
+    Console.WriteLine($"attach pid={eng.Target.ProcessId}  hash={TaskHeroX.Core.Il2Cpp.BuildInfo.DllHash(eng.Target.ModulePath)}");
     var disp = eng.Dispatcher as TbhBot.Core.Game.RealDispatcher;
     if (disp is null) { Console.WriteLine("[x] dispatcher não é RealDispatcher"); return; }
     Console.WriteLine($"IsReady antes = {disp.IsReady} (instala preguiçosamente no 1º comando)");

@@ -1,4 +1,4 @@
-namespace TbhBot.Core.Il2Cpp;
+namespace TaskHeroX.Core.Il2Cpp;
 
 /// <summary>
 /// Tabela de simbolos/offsets resolvidos por build (o <c>self.sym</c> do Python).

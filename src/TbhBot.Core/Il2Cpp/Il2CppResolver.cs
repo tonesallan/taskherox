@@ -1,7 +1,7 @@
 using Iced.Intel;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Il2Cpp;
+namespace TaskHeroX.Core.Il2Cpp;
 
 /// <summary>
 /// Resolve estruturas IL2CPP em runtime: o singleton "bau" que segura o PlayerSaveData,

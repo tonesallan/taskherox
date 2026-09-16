@@ -1,11 +1,11 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using TbhBot.App.Services;
-using TbhBot.Core.Il2Cpp;
+using TaskHeroX.Core.Il2Cpp;
 
 namespace TbhBot.App.Views;
 

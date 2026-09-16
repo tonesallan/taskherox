@@ -1,4 +1,4 @@
-namespace TbhBot.Core.Il2Cpp;
+namespace TaskHeroX.Core.Il2Cpp;
 
 // RVAs conhecidos por build (fallback rapido; se o hash nao bater, re-dumpa sozinho).
 // Portado de KNOWN_BUILDS no tbh_core.py: gra, bau_ti (null = resolve em runtime pelo inv_class),

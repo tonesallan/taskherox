@@ -1,4 +1,4 @@
-using TbhBot.Core.Il2Cpp;
+using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
 namespace TbhBot.Core.Game;

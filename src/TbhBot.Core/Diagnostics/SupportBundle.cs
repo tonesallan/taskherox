@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using TbhBot.Core;
 using TbhBot.Core.Game;
-using TbhBot.Core.Il2Cpp;
+using TaskHeroX.Core.Il2Cpp;
 
 namespace TaskHeroX.Core.Diagnostics;
 

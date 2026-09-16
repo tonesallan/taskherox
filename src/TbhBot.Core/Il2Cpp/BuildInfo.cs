@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace TbhBot.Core.Il2Cpp;
+namespace TaskHeroX.Core.Il2Cpp;
 
 /// <summary>
 /// Identidade da build do jogo. Portado de <c>dll_hash()</c> no tbh_core.py:

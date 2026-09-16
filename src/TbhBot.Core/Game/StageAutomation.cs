@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using TbhBot.Core.Il2Cpp;
+using TaskHeroX.Core.Il2Cpp;
 
 namespace TbhBot.Core.Game;
 

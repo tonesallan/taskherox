@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using TbhBot.Core;
-using TbhBot.Core.Il2Cpp;
+using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Market;
 
 namespace TbhBot.Cli;
