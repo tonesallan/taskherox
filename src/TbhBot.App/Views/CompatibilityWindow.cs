@@ -5,7 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using TbhBot.App.Services;
-using TbhBot.Core.Diagnostics;
+using TaskHeroX.Core.Diagnostics;
 
 namespace TbhBot.App.Views;
 

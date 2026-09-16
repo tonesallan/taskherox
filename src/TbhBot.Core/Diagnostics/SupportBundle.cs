@@ -1,9 +1,10 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using TbhBot.Core;
 using TbhBot.Core.Game;
 using TbhBot.Core.Il2Cpp;
 
-namespace TbhBot.Core.Diagnostics;
+namespace TaskHeroX.Core.Diagnostics;
 
 public sealed record SupportBundleDocument(
     string SchemaVersion,
