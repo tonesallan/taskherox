@@ -77,7 +77,10 @@ public static class SupportBundleCollector
     {
         ArgumentNullException.ThrowIfNull(engine);
 
+        string[] rawLogs = (logTail ?? []).TakeLast(100).ToArray();
+        string[] logs = rawLogs.Select(SupportBundleRedactor.RedactText).ToArray();
         bool attached = engine.IsAttached;
+
         var statsStatus = GameConstants.Stats.Keys
             .OrderBy(x => x, StringComparer.Ordinal)
             .Select(name => new StatReadStatus(name, false))
@@ -127,13 +130,15 @@ public static class SupportBundleCollector
 
         var symbols = CriticalSymbols
             .OrderBy(x => x, StringComparer.Ordinal)
-            .Select(name => new SymbolReadStatus(name, attached && engine.Symbols is not null && engine.Symbols.Has(name)))
+            .Select(name => new SymbolReadStatus(
+                name,
+                attached && engine.Symbols is not null && engine.Symbols.Has(name)))
             .ToArray();
 
         bool editorReady = readableStats == GameConstants.Stats.Count &&
                            stageFieldsRead == GameConstants.StageFields.Count;
-        bool saveReady = progress.RuntimeCurrent is > 0 or null &&
-                         runeEntries > 0 && inventoryItems >= 0 && psdResolved;
+        bool progressReady = progress.RuntimeCurrent > 0 || progress.SaveCurrent > 0;
+        bool saveReady = progressReady && runeEntries > 0 && inventoryItems >= 0 && psdResolved;
         bool type1Ready = attached && engine.StageNav is not null && engine.StageNav.CanValidateType1Entry;
         bool genericJgc = attached && engine.Symbols is not null && engine.Symbols.Has("jgc");
         bool splitType1 = attached && engine.StageNav is not null && engine.StageNav.UsesSplitType1Validator;
@@ -147,7 +152,7 @@ public static class SupportBundleCollector
             new CapabilityStatus(
                 "save-reads",
                 saveReady ? "ready" : "degraded",
-                $"runes={runeEntries}; inventory={inventoryItems}; psd={(psdResolved ? "resolved" : "failed")}"),
+                $"progress={(progressReady ? "resolved" : "failed")}; runes={runeEntries}; inventory={inventoryItems}; psd={(psdResolved ? "resolved" : "failed")}"),
             new CapabilityStatus(
                 "stage-entry.type1",
                 type1Ready ? "ready" : "blocked",
@@ -174,11 +179,6 @@ public static class SupportBundleCollector
                     : "no split type-3 production route is exposed"),
         };
 
-        string[] logs = (logTail ?? [])
-            .TakeLast(100)
-            .Select(SupportBundleRedactor.RedactText)
-            .ToArray();
-
         return new SupportBundleDocument(
             SchemaVersion,
             createdUtc ?? DateTimeOffset.UtcNow,
@@ -192,7 +192,7 @@ public static class SupportBundleCollector
                 string.IsNullOrWhiteSpace(engine.Target.ModulePath) ? null : Path.GetFileName(engine.Target.ModulePath)),
             new OffsetsDiagnosticInfo(
                 engine.OffsetsLoaded,
-                engine.OffsetsSource,
+                DetectOffsetsSource(engine, rawLogs),
                 SymbolTable.MinExtractVer,
                 symbols),
             new CompatibilityDiagnosticInfo(
@@ -208,6 +208,23 @@ public static class SupportBundleCollector
                 psdResolved,
                 capabilities),
             logs);
+    }
+
+    private static string DetectOffsetsSource(Engine engine, IReadOnlyList<string> rawLogs)
+    {
+        if (!engine.OffsetsLoaded) return "not-loaded";
+        if (engine.BuildHash is { Length: > 0 } hash && GameConstants.KnownBuilds.ContainsKey(hash))
+            return "known-build";
+
+        for (int i = rawLogs.Count - 1; i >= 0; i--)
+        {
+            string line = rawLogs[i];
+            if (line.Contains("baixados do feed", StringComparison.OrdinalIgnoreCase)) return "feed";
+            if (line.Contains("offsets carregados do cache", StringComparison.OrdinalIgnoreCase)) return "cache";
+            if (line.Contains("offsets embutidos", StringComparison.OrdinalIgnoreCase)) return "embedded";
+        }
+
+        return "loaded";
     }
 
     private static int? NullIfNegative(int value) => value < 0 ? null : value;
