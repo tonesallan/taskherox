@@ -12,7 +12,7 @@ namespace TbhBot.Core.Automation;
 ///
 /// IMPORTANTE: as ACOES reais (abrir caixa, mover pro bau, fundir no cubo) dependem da Fase 3 —
 /// o IMainThreadDispatcher e implementado pelo orquestrador. Enquanto Dispatcher.IsReady==false,
-/// apenas logamos "dispatcher nao pronto" e seguimos (nao trava, nao lança).
+/// apenas logamos "dispatcher nao pronto" e seguimos (nao trava, não lança).
 /// Tudo async e cancelavel (nada de Thread.Sleep; sempre await Task.Delay(.., ct)).
 /// </summary>
 public sealed class AutomationLoop(Engine engine)
@@ -94,11 +94,10 @@ public sealed class AutomationLoop(Engine engine)
         if (engine.WantAutofuse && engine.AutoFuse.DoSynth(() => engine.WantAutofuse && engine.IsAttached))
             did = true;
 
-        // AutoBoss/Evolution dependem do caminho de validação de entrada de stage (jgc).
-        // Na build 139467f3ad72 esse método foi dividido em duas rotas com semânticas diferentes;
-        // escolher uma arbitrariamente seria inseguro. Até existir um jgc validado para o build,
-        // as intenções são desligadas aqui no engine — não apenas escondidas na UI.
-        bool stageEntryReady = engine.Symbols.Has("jgc");
+        // AutoBoss/Evolution só precisam validar entrada de STAGETYPE=1. Builds antigas usam jgc;
+        // a build 139467f3ad72 usa o candidate-A validado ao vivo apenas para type=1.
+        // Type=2/type=3 continuam fora desse gate e não são liberados por inferência.
+        bool stageEntryReady = engine.StageNav.CanValidateType1Entry;
         if (!stageEntryReady && (engine.WantAutoboss || engine.WantEvolve))
         {
             engine.WantAutoboss = false;
@@ -106,7 +105,7 @@ public sealed class AutomationLoop(Engine engine)
             if (!_stageEntryBlockedLogged)
             {
                 _stageEntryBlockedLogged = true;
-                Log?.Invoke("⚠ AutoBoss/Evolution bloqueados: stage-entry (jgc) ainda não foi validado para este build");
+                Log?.Invoke("⚠ AutoBoss/Evolution bloqueados: validação de entrada type=1 ainda não está disponível para este build");
             }
         }
         else if (stageEntryReady)
