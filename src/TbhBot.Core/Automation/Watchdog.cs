@@ -1,6 +1,6 @@
 using TbhBot.Core;
 
-namespace TbhBot.Core.Automation;
+namespace TaskHeroX.Core.Automation;
 
 /// <summary>
 /// Watchdog: reconecta quando o jogo fecha/reabre. Portado do racional do _watchdog_loop

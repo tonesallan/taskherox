@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using TbhBot.Core;
-using TbhBot.Core.Automation;
+using TaskHeroX.Core.Automation;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 

@@ -1,6 +1,6 @@
 using TbhBot.Core;
 
-namespace TbhBot.Core.Automation;
+namespace TaskHeroX.Core.Automation;
 
 /// <summary>
 /// AutomationLoop: UM unico loop de automacao. Portado do racional do _auto_loop (tbh_core.py ~1922):

@@ -116,7 +116,7 @@ internal static class E2E
         // ===================== CONCORRÊNCIA (loop aplica Want*) =====================
         Section("CONCORRÊNCIA (Fase 4 — AutomationLoop aplica as flags Want*)");
         {
-            var loop = new TbhBot.Core.Automation.AutomationLoop(e);
+            var loop = new TaskHeroX.Core.Automation.AutomationLoop(e);
             using var cts = new CancellationTokenSource();
             nint a = e.Scanner.FindAob(GameConstants.AobGodmode);
             e.WantGodmode = true;

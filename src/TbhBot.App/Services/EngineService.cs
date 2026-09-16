@@ -1,7 +1,7 @@
 using System.Windows;
 using TbhBot.App.Views;
 using TbhBot.Core;
-using TbhBot.Core.Automation;
+using TaskHeroX.Core.Automation;
 
 namespace TbhBot.App.Services;
 
