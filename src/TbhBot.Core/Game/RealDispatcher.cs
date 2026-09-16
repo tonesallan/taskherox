@@ -177,6 +177,40 @@ public sealed class RealDispatcher : IMainThreadDispatcher, IDisposable
              dCNT = D + 0x14, dARG2 = D + 0x18, dREQ = D + 0x20, dFUNC = D + 0x38, dRET = D + 0x40;
         long FAKE = (long)cave + 0x920;
 
+        // ------------------------------------------------------------
+        // Boss delegate real - build c265dc8bc7aa
+        //
+        // StageNode.hzz():
+        //   metadata init
+        //   RuntimeClassInit(StageNode.<>c)
+        //   delegate = <>9__17_0
+        //
+        //   if (delegate == null) {
+        //       delegate = new Action<bool>(<>9, hzs);
+        //       <>9__17_0 = delegate;
+        //   }
+        //
+        //   jvd(cache, delegate)
+        //
+        // Estes RVAs são exclusivos da build validada abaixo.
+        // ------------------------------------------------------------
+
+        bool bossDelegateC265 =
+            _sym.Get("uo_ti") == 0x5F5C9C8 &&
+            _sym.Get("stage_off") == 0x88 &&
+            _sym.Get("jgd") == 0x9AA370 &&
+            _sym.Get("jgk") == 0x9ABC50;
+
+        long META_INIT       = B + 0x597290;
+        long CLASS_INIT      = B + 0x5975D0;
+        long OBJECT_ALLOC    = B + 0x5974E0;
+        long DELEGATE_CTOR   = B + 0x6EA7C0;
+        long WRITE_BARRIER   = B + 0x5963B0;
+
+        long CLOSURE_SLOT    = B + 0x5FC5A28;
+        long ACTION_SLOT     = B + 0x5F39DC8;
+        long HZS_METHOD_SLOT = B + 0x5F9FC30;
+
         var c = new List<byte>();
         var lab = new Dictionary<string, int>();
         var fix = new List<(int pos, string label)>();
@@ -238,10 +272,184 @@ public sealed class RealDispatcher : IMainThreadDispatcher, IDisposable
         Raw(0x48, 0xB8); Imm(dARGP); Raw(0x48, 0x8B, 0x08, 0x48, 0x85, 0xC9); Jcc([0x0F, 0x84], "done");
         Raw(0x48, 0x83, 0xEC, 0x20, 0x48, 0xB8); Imm(LLM); Raw(0xFF, 0xD0, 0x48, 0x83, 0xC4, 0x20); Jmp("done");
 
-        Lbl("c13"); Raw(0x83, 0xF8, 0x0D); Jcc([0x0F, 0x85], "c12");                        // cmd13 jgd(argP,FAKE)
-        Raw(0x48, 0xB8); Imm(dARGP); Raw(0x48, 0x8B, 0x08, 0x48, 0x85, 0xC9); Jcc([0x0F, 0x84], "done");
-        Raw(0x48, 0xBA); Imm(FAKE);
-        Raw(0x48, 0x83, 0xEC, 0x20, 0x48, 0xB8); Imm(JGD); Raw(0xFF, 0xD0, 0x48, 0x83, 0xC4, 0x20); Jmp("done");
+        Lbl("c13"); Raw(0x83, 0xF8, 0x0D); Jcc([0x0F, 0x85], "c12");                        // cmd13 boss entry
+
+        // StageCache precisa existir em todos os caminhos.
+        Raw(0x48, 0xB8); Imm(dARGP);
+        Raw(0x48, 0x8B, 0x08);
+        Raw(0x48, 0x85, 0xC9);
+        Jcc([0x0F, 0x84], "done");
+
+        if (bossDelegateC265)
+        {
+            // ========================================================
+            // Inicializa os três slots de metadata usados por hzz().
+            // ========================================================
+
+            foreach (long slot in new[]
+            {
+                CLOSURE_SLOT,
+                ACTION_SLOT,
+                HZS_METHOD_SLOT
+            })
+            {
+                // RCX = &metadataSlot
+                Raw(0x48, 0xB9); Imm(slot);
+
+                Raw(0x48, 0x83, 0xEC, 0x20);
+                Raw(0x48, 0xB8); Imm(META_INIT);
+                Raw(0xFF, 0xD0);
+                Raw(0x48, 0x83, 0xC4, 0x20);
+            }
+
+            // ========================================================
+            // RuntimeClassInit(StageNode.<>c)
+            //
+            // RCX = [CLOSURE_SLOT]
+            // ========================================================
+
+            Raw(0x48, 0xB8); Imm(CLOSURE_SLOT);
+            Raw(0x48, 0x8B, 0x08);
+
+            Raw(0x48, 0x83, 0xEC, 0x20);
+            Raw(0x48, 0xB8); Imm(CLASS_INIT);
+            Raw(0xFF, 0xD0);
+            Raw(0x48, 0x83, 0xC4, 0x20);
+
+            // ========================================================
+            // Verifica <>9__17_0:
+            //
+            // RAX = klass
+            // RAX = static_fields
+            // [RAX+8] = cached delegate
+            // ========================================================
+
+            Raw(0x48, 0xB8); Imm(CLOSURE_SLOT);
+            Raw(0x48, 0x8B, 0x00);
+            Raw(0x48, 0x8B, 0x80, 0xB8, 0x00, 0x00, 0x00);
+
+            // cmp qword ptr [rax+8],0
+            Raw(0x48, 0x83, 0x78, 0x08, 0x00);
+
+            // delegate já existe -> pula criação
+            Jcc([0x0F, 0x85], "c13_delegate_ready");
+
+            // ========================================================
+            // delegate = il2cpp_object_new(Action<bool>)
+            // ========================================================
+
+            Raw(0x48, 0xB8); Imm(ACTION_SLOT);
+            Raw(0x48, 0x8B, 0x08);                // rcx=[ACTION_SLOT]
+
+            Raw(0x48, 0x83, 0xEC, 0x20);
+            Raw(0x48, 0xB8); Imm(OBJECT_ALLOC);
+            Raw(0xFF, 0xD0);
+            Raw(0x48, 0x83, 0xC4, 0x20);
+
+            // Guarda temporariamente o novo delegate em dRET.
+            Raw(0x49, 0xBB); Imm(dRET);
+            Raw(0x49, 0x89, 0x03);
+
+            // ========================================================
+            // RDX = <>9 singleton
+            // ========================================================
+
+            Raw(0x48, 0xB8); Imm(CLOSURE_SLOT);
+            Raw(0x48, 0x8B, 0x00);
+            Raw(0x48, 0x8B, 0x80, 0xB8, 0x00, 0x00, 0x00);
+            Raw(0x48, 0x8B, 0x10);                // rdx=[static_fields]
+
+            // ========================================================
+            // R8 = MethodInfo* de hzs(bool)
+            // ========================================================
+
+            Raw(0x48, 0xB8); Imm(HZS_METHOD_SLOT);
+            Raw(0x4C, 0x8B, 0x00);                // r8=[rax]
+
+            // R9 = null
+            Raw(0x45, 0x31, 0xC9);
+
+            // RCX = delegate recém-alocado
+            Raw(0x48, 0xB8); Imm(dRET);
+            Raw(0x48, 0x8B, 0x08);
+
+            // ========================================================
+            // Action<bool>..ctor(delegate, <>9, MethodInfo*)
+            // ========================================================
+
+            Raw(0x48, 0x83, 0xEC, 0x20);
+            Raw(0x48, 0xB8); Imm(DELEGATE_CTOR);
+            Raw(0xFF, 0xD0);
+            Raw(0x48, 0x83, 0xC4, 0x20);
+
+            // ========================================================
+            // <>9__17_0 = delegate
+            // ========================================================
+
+            Raw(0x48, 0xB8); Imm(dRET);
+            Raw(0x48, 0x8B, 0x10);                // rdx=delegate
+
+            Raw(0x48, 0xB8); Imm(CLOSURE_SLOT);
+            Raw(0x48, 0x8B, 0x00);
+            Raw(0x48, 0x8B, 0x80, 0xB8, 0x00, 0x00, 0x00);
+
+            Raw(0x48, 0x89, 0x50, 0x08);          // [rax+8]=rdx
+
+            // ========================================================
+            // write barrier exatamente como hzz():
+            // RCX = &(static_fields+8)
+            // RDX = delegate
+            // ========================================================
+
+            Raw(0x48, 0x83, 0xC0, 0x08);
+            Raw(0x48, 0x89, 0xC1);
+
+            Raw(0x48, 0x83, 0xEC, 0x20);
+            Raw(0x48, 0xB8); Imm(WRITE_BARRIER);
+            Raw(0xFF, 0xD0);
+            Raw(0x48, 0x83, 0xC4, 0x20);
+
+            Lbl("c13_delegate_ready");
+
+            // ========================================================
+            // RDX = <>9__17_0
+            // ========================================================
+
+            Raw(0x48, 0xB8); Imm(CLOSURE_SLOT);
+            Raw(0x48, 0x8B, 0x00);
+            Raw(0x48, 0x8B, 0x80, 0xB8, 0x00, 0x00, 0x00);
+            Raw(0x48, 0x8B, 0x50, 0x08);
+
+            Raw(0x48, 0x85, 0xD2);
+            Jcc([0x0F, 0x84], "done");
+
+            // RCX = StageCache
+            Raw(0x48, 0xB8); Imm(dARGP);
+            Raw(0x48, 0x8B, 0x08);
+
+            // MethodInfo* de jvd = null
+            Raw(0x45, 0x31, 0xC0);
+
+            // jvd(StageCache, Action<bool>, null)
+            Raw(0x48, 0x83, 0xEC, 0x20);
+            Raw(0x48, 0xB8); Imm(JGD);
+            Raw(0xFF, 0xD0);
+            Raw(0x48, 0x83, 0xC4, 0x20);
+
+            Jmp("done");
+        }
+        else
+        {
+            // Builds antigos: mantém comportamento legado.
+            Raw(0x48, 0xBA); Imm(FAKE);
+
+            Raw(0x48, 0x83, 0xEC, 0x20);
+            Raw(0x48, 0xB8); Imm(JGD);
+            Raw(0xFF, 0xD0);
+            Raw(0x48, 0x83, 0xC4, 0x20);
+
+            Jmp("done");
+        }
 
         Lbl("c12"); Raw(0x83, 0xF8, 0x0C); Jcc([0x0F, 0x85], "done");                       // cmd12 [dFUNC](argP,argI)
         Raw(0x48, 0xB8); Imm(dARGP); Raw(0x48, 0x8B, 0x08);

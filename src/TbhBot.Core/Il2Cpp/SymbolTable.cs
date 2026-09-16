@@ -21,7 +21,7 @@ public sealed class SymbolTable
     /// Foi exatamente o que aconteceu com o alvo do ACTk (v7): quem já tinha baixado o json v6 do
     /// feed continuaria com o alvo que derruba o jogo mesmo depois do fix.
     /// </summary>
-    public const int MinExtractVer = 7;
+    public const int MinExtractVer = 8;
 
     /// <summary>Equivale a <c>self.sym.get(key, def)</c>: retorna o valor ou o default (0) se ausente.</summary>
     public long Get(string key, long def = 0) => _sym.TryGetValue(key, out var v) ? v : def;

@@ -91,7 +91,7 @@ public sealed class CompatibilityWindow : Window
         stack.Children.Add(Card("Critical symbols", new[]
         {
             ("Core offset set", "symbols"),
-            ("Stage entry / jgc", "jgc"),
+            ("Stage entry / type-1", "jgc"),
         }));
         stack.Children.Add(Card("Semantic reads", new[]
         {
@@ -211,14 +211,17 @@ public sealed class CompatibilityWindow : Window
             string[] critical = ["gra", "uo_ti", "uo_max", "uo_cur", "uo_wave", "bal_ti", "stage_off"];
             string[] missing = critical.Where(k => !e.Symbols.Has(k)).ToArray();
             bool symbolsOk = missing.Length == 0;
-            bool jgc = e.Symbols.Has("jgc");
+            bool stageEntryType1 = e.StageNav.CanValidateType1Entry;
+            bool splitType1 = e.StageNav.UsesSplitType1Validator;
 
             Set("process", $"ATTACHED · PID {e.Target.ProcessId}", true);
             Set("build", e.BuildHash ?? "unknown", e.BuildHash is { Length: > 0 });
             Set("module", $"0x{e.Target.ModuleBase:X}", e.Target.ModuleBase != 0);
             Set("offsets", e.OffsetsLoaded ? "READY" : "AOB / PARTIAL", e.OffsetsLoaded);
             Set("symbols", symbolsOk ? $"READY · {critical.Length}/{critical.Length}" : $"MISSING: {string.Join(", ", missing)}", symbolsOk);
-            Set("jgc", jgc ? "RESOLVED" : "UNRESOLVED · split semantics pending", jgc ? true : null);
+            Set("jgc", stageEntryType1
+                ? (splitType1 ? "VALIDATED · split type=1" : "RESOLVED · legacy jgc")
+                : "UNRESOLVED · type=1 validator unavailable", stageEntryType1 ? true : null);
 
             var diag = await Task.Run(() => RunReadDiagnostics(e));
 
@@ -233,11 +236,11 @@ public sealed class CompatibilityWindow : Window
             bool save = diag.ProgressOk && diag.Runes > 0 && diag.Inventory >= 0 && diag.Psd;
             Set("gate-editor", editor ? "READY" : "DEGRADED", editor);
             Set("gate-save", save ? "READY" : "DEGRADED", save);
-            Set("gate-stage-entry", jgc ? "READY" : "BLOCKED · validation path unresolved", jgc);
+            Set("gate-stage-entry", stageEntryType1 ? "READY · type=1 validated" : "BLOCKED · type=1 unresolved", stageEntryType1);
 
             int okCount = new[] { e.OffsetsLoaded, symbolsOk, editor, save }.Count(x => x);
-            _summary.Text = jgc
-                ? $"Core compatibility: {okCount}/4 · stage-entry path resolved."
+            _summary.Text = stageEntryType1
+                ? $"Core compatibility: {okCount}/4 · AutoBoss/Evolution type-1 gate ready{(splitType1 ? " via validated split route" : "")}."
                 : $"Core compatibility: {okCount}/4 · editor/save routes can work, but AutoBoss/Evolution remain a separate unresolved gate.";
         }
         catch (Exception ex)
