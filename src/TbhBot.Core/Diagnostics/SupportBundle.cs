@@ -79,7 +79,11 @@ public static class SupportBundleCollector
 
         string[] rawLogs = (logTail ?? []).TakeLast(100).ToArray();
         string[] logs = rawLogs.Select(SupportBundleRedactor.RedactText).ToArray();
-        bool attached = engine.IsAttached;
+
+        // Engine.IsAttached sozinho pode permanecer true por alguns instantes depois que o processo
+        // do jogo encerra, porque o handle/base da sessão anterior só são substituídos no próximo attach.
+        // O bundle deve refletir o estado efetivo da conexão, igual ao EngineService.
+        bool attached = engine.IsAttached && engine.Target.IsAlive();
 
         var statsStatus = GameConstants.Stats.Keys
             .OrderBy(x => x, StringComparer.Ordinal)
