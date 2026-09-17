@@ -166,8 +166,46 @@ public static class Il2CppSemanticExtractor
 
         if (pairedOwners.Length > 1)
         {
+            var playerSaveOwners = pairedOwners
+                .Where(entry => string.Equals(
+                    entry.Class.Name,
+                    "PlayerSaveData",
+                    StringComparison.Ordinal))
+                .ToArray();
+
+            if (playerSaveOwners.Length == 1)
+            {
+                var owner = playerSaveOwners[0];
+
+                if (owner.Inventory.Length != 1)
+                {
+                    offsets = null;
+                    error = $"inventory slot field ambiguous ({owner.Inventory.Length}) in PlayerSaveData";
+                    return false;
+                }
+
+                if (owner.Stash.Length != 1)
+                {
+                    offsets = null;
+                    error = $"stash slot field ambiguous ({owner.Stash.Length}) in PlayerSaveData";
+                    return false;
+                }
+
+                offsets = new InventorySlotOffsets(
+                    owner.Inventory[0].Offset,
+                    owner.Stash[0].Offset,
+                    owner.Class.Name);
+                error = null;
+                return true;
+            }
+
+            string owners = string.Join(
+                ", ",
+                pairedOwners.Select(entry =>
+                    $"{entry.Class.Name}[inv={entry.Inventory.Length},stash={entry.Stash.Length}]"));
+
             offsets = null;
-            error = $"inventory/stash owner ambiguous ({pairedOwners.Length})";
+            error = $"inventory/stash owner ambiguous ({pairedOwners.Length}): {owners}";
             return false;
         }
 
