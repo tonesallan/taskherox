@@ -5,7 +5,7 @@
 >
 > Código-fonte real:
 > - View: `src/TbhBot.App/Views/InventoryView.cs`
-> - Motor: `src/TbhBot.Core/Game/Inventory.cs`
+> - Motor: `src/TaskHeroX.Core/Game/Inventory.cs`
 > - Tema: `src/TbhBot.App/Theme/Dark.xaml`
 > - Serviço: `src/TbhBot.App/Services/EngineService.cs`
 

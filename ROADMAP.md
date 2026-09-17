@@ -84,6 +84,6 @@ Legenda: 🟢 feito · 🟡 em andamento · ⚪ pendente
 ### Notas de decisão
 - **UI:** WPF (nativo, single-file trivial). Alternativa moderna: **Avalonia** (MVVM + theming melhor para o
   tema custom + canvas) — trocável na Fase 5 sem tocar no Core.
-- **Core sem UI:** todo o conhecimento sensível (anti-cheat, ObscuredInt, offsets) fica em `TbhBot.Core`,
+- **Core sem UI:** todo o conhecimento sensível (anti-cheat, ObscuredInt, offsets) fica em `TaskHeroX.Core`,
   testável pelo `TbhBot.Cli` sem abrir janela.
 - **Regra do force-close:** stage/cube continuam "recarrega uma vez" (ObscuredInt/ACTk); runas seguem ao vivo.

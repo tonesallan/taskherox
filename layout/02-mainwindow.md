@@ -2,8 +2,8 @@
 
 > Fonte da verdade: `src/TbhBot.App/MainWindow.xaml`, `src/TbhBot.App/MainWindow.xaml.cs`,
 > `src/TbhBot.App/Services/EngineService.cs`, `src/TbhBot.App/Services/WatchdogService.cs`,
-> `src/TbhBot.Core/Automation/AutomationLoop.cs`, `src/TbhBot.Core/Engine.cs`,
-> `src/TbhBot.Core/Memory/ProcessTarget.cs`, tema `src/TbhBot.App/Theme/Dark.xaml`.
+> `src/TaskHeroX.Core/Automation/AutomationLoop.cs`, `src/TaskHeroX.Core/Engine.cs`,
+> `src/TaskHeroX.Core/Memory/ProcessTarget.cs`, tema `src/TbhBot.App/Theme/Dark.xaml`.
 >
 > Este documento descreve a **FUNÇÃO**, não o visual atual. Quem for redesenhar pode mudar tudo que for
 > aparência, mas **não pode inventar comportamento** — os textos, os métodos chamados, as guardas e os

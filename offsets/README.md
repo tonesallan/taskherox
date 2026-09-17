@@ -13,7 +13,7 @@ Com o feed, o painel instalado faz um GET de ~13 KB no start, acha o JSON do bui
 funcionar **na mesma sessão** — sem baixar exe, sem reinstalar, sem ação do usuário. Se o build ainda
 não estiver publicado aqui (404), o painel segue em modo degradado (só cheats por AOB) e o banner explica.
 
-Consumido por `src/TbhBot.Core/Update/OffsetsFeed.cs`; o painel grava o resultado em
+Consumido por `src/TaskHeroX.Core/Update/OffsetsFeed.cs`; o painel grava o resultado em
 `<pasta do exe>/cache/offsets_<hash>.json`, que é o primeiro lugar que o `Engine.Attach` procura.
 
 ## Como publicar um build novo
@@ -26,7 +26,7 @@ py -3 -c "import tbh_core as C; print(C._offsets_ok(C.resolve_symbols(print)))"
 # re-dumpa (~40s), extrai e grava cache/offsets_<hash>.json — imprime True se veio completo
 ```
 
-Depois: copie o JSON pra cá **e** pra `src/TbhBot.Core/Offsets/` (assim o próximo release já sai com ele
+Depois: copie o JSON pra cá **e** pra `src/TaskHeroX.Core/Offsets/` (assim o próximo release já sai com ele
 embutido, e quem instalar do zero não depende de rede), commit e push. Pronto — os painéis já instalados
 se atualizam sozinhos.
 

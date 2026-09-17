@@ -4,7 +4,7 @@
 > documento; nenhum comportamento pode ser adivinhado.
 >
 > Código-fonte: `src/TbhBot.App/Views/TrainerView.cs` (view inteira, construída em C# code-behind, sem XAML
-> por-tela). Tema: `src/TbhBot.App/Theme/Dark.xaml`. Backend: `src/TbhBot.Core/` (Engine + Game/*).
+> por-tela). Tema: `src/TbhBot.App/Theme/Dark.xaml`. Backend: `src/TaskHeroX.Core/` (Engine + Game/*).
 > Persistência de profiles: `src/TbhBot.App/Services/ProfileStore.cs`.
 
 ---

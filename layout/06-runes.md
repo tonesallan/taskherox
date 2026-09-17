@@ -5,7 +5,7 @@
 >
 > Código-fonte: `src/TbhBot.App/Views/RunesView.cs`
 > Tema: `src/TbhBot.App/Theme/Dark.xaml`
-> Backend: `src/TbhBot.Core/Game/RuneDefs.cs`, `RuneLevels.cs`, `SaveData.cs` (métodos `ReadRunes`/`SetRune`)
+> Backend: `src/TaskHeroX.Core/Game/RuneDefs.cs`, `RuneLevels.cs`, `SaveData.cs` (métodos `ReadRunes`/`SetRune`)
 > Serviço: `src/TbhBot.App/Services/EngineService.cs`
 
 ---

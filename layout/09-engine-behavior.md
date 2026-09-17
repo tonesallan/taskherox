@@ -4,10 +4,10 @@
 > no nível do motor (`Engine`, `AutomationLoop`, `StageAutomation`, `WatchdogService`, `RealDispatcher`).
 > Quem for redesenhar o layout pode mudar TUDO no visual, mas **precisa preservar estes comportamentos**.
 >
-> Arquivos lidos: `src/TbhBot.Core/Engine.cs`, `src/TbhBot.Core/Automation/AutomationLoop.cs`,
-> `src/TbhBot.App/Services/WatchdogService.cs`, `src/TbhBot.Core/Game/StageAutomation.cs`,
+> Arquivos lidos: `src/TaskHeroX.Core/Engine.cs`, `src/TaskHeroX.Core/Automation/AutomationLoop.cs`,
+> `src/TbhBot.App/Services/WatchdogService.cs`, `src/TaskHeroX.Core/Game/StageAutomation.cs`,
 > `src/TbhBot.App/Services/EngineService.cs`, `src/TbhBot.App/Views/TrainerView.cs`,
-> `src/TbhBot.Core/Game/{Cheats,AutoBox,AutoStash,AutoFuse,StatEditor,StageNav,SaveData,RealDispatcher}.cs`,
+> `src/TaskHeroX.Core/Game/{Cheats,AutoBox,AutoStash,AutoFuse,StatEditor,StageNav,SaveData,RealDispatcher}.cs`,
 > `src/TbhBot.App/Theme/Dark.xaml`.
 
 ---

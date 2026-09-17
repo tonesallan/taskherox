@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\TbhBot.Core\TbhBot.Core.csproj" />
+    <ProjectReference Include="..\TaskHeroX.Core\TaskHeroX.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

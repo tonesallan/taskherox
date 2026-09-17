@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TbhBot.Core\TbhBot.Core.csproj" />
+    <ProjectReference Include="..\..\src\TaskHeroX.Core\TaskHeroX.Core.csproj" />
   </ItemGroup>
 
 </Project>
