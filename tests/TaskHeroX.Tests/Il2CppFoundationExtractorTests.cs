@@ -14,6 +14,11 @@ public static class Uo
     public static List<StageCache> list; // 0x10
     public static Dictionary<int, StageCache> dict; // 0x18
     public static StageCache current; // 0x20
+    public static ObscuredInt max; // 0x50
+    public static ObscuredInt cur; // 0x60
+    public static ObscuredInt wave; // 0x70
+    public static ObscuredInt extra1; // 0x80
+    public static ObscuredInt extra2; // 0x90
     // RVA: 0x1100
     public static void enter(int key) { }
     // RVA: 0x1200
@@ -24,6 +29,8 @@ public static class Uo
     public static EStageEnterResultType validateBoss(StageCache cache) { }
     // RVA: 0x1500
     public static EStageEnterResultType validateType2(StageCache cache) { }
+    // RVA: 0x2400
+    public static void install(StageCache cache) { }
 }
 
 public class StageNode
@@ -133,12 +140,13 @@ public static class uw.Cube
         var functions = new Dictionary<long, byte[]>
         {
             [0x1000] = BuildCalls(0x1000, 0x1100, 0x1200, 0x1300, 0x1400, 0x1500),
-            [0x1100] = [0xC3],
-            [0x1200] = [0x3D, 0x4D, 0x04, 0x00, 0x00, 0xC3],
+            [0x1100] = BuildCalls(0x1100, 0x2400),
+            [0x1200] = [0x8B,0x40,0x50, 0x3D, 0x4D, 0x04, 0x00, 0x00, 0xC3],
             [0x1300] = [0xC3],
             [0x1400] = [0x83, 0xF8, 0x01, 0x83, 0xF8, 0x03, 0xC3],
             [0x1500] = [0x83, 0xF8, 0x02, 0xC3],
             [0x1900] = BuildLlx(0x1900, 0x2500),
+            [0x2400] = [0x89,0x48,0x60, 0x48,0x89,0x48,0x20, 0x89,0x48,0x70, 0xC3],
         };
 
         bool ok = Il2CppFoundationExtractor.TryExtract(
@@ -154,6 +162,9 @@ public static class uw.Cube
         Assert.Equal(0x7000L, offsets.Symbols["uo_ti"]);
         Assert.Equal(0x18L, offsets.Symbols["uo_dict"]);
         Assert.Equal(0x20L, offsets.Symbols["uo_cur_cache"]);
+        Assert.Equal(0x50L, offsets.Symbols["uo_max"]);
+        Assert.Equal(0x60L, offsets.Symbols["uo_cur"]);
+        Assert.Equal(0x70L, offsets.Symbols["uo_wave"]);
         Assert.Equal(0x7200L, offsets.Symbols["bal_ti"]);
         Assert.Equal(0x48L, offsets.Symbols["stage_off"]);
         Assert.Equal(0x88L, offsets.Symbols["inv_slots_off"]);
