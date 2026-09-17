@@ -19,7 +19,7 @@ crasham se chamadas de outra thread.
 ## O que falta para implementar em C# (`RealDispatcher : IMainThreadDispatcher`)
 1. **Disassembler** — medir o prólogo relocável. Usar o NuGet **Iced** (`Iced.Intel`) para desmontar de `UPD`
    até acumular ≥5 bytes sem instrução rip-relative/branch (equivalente ao `_prologue_len`).
-2. **Alloc do cave** — já temos: `TbhBot.Core.Memory.CodeCave.Alloc`.
+2. **Alloc do cave** — já temos: `TaskHeroX.Core.Memory.CodeCave.Alloc`.
 3. **Shellcode** — portar `_dispatch_code` (emitir os bytes do loop de comandos + o trampolim dos bytes roubados).
 4. **Suspend/resume de threads** — P/Invoke `CreateToolhelp32Snapshot`/`Thread32First/Next` +
    `OpenThread`/`SuspendThread`/`ResumeThread` (por `ProcessId`), para o patch do prólogo.

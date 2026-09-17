@@ -8,7 +8,7 @@
 Painel (trainer) do jogo **TaskbarHero** (Steam appid `3678970`, jogo Unity IL2CPP, offline com validação
 no backend TheBackend). O painel lê/escreve a memória do jogo para: forçar stats, desbloquear cubo/runas/
 estágios, automatizar caixas/baú/fusão/boss/evolução, mostrar inventário/preços, e reabrir o jogo sozinho
-se cair (auto-restart). É um **WPF em C#/.NET 10**, entregue como **1 .exe self-contained** (`dist/TbhBot.App.exe`).
+se cair (auto-restart). É um **WPF em C#/.NET 10**, entregue como **1 .exe self-contained** (`dist/TaskHeroX.exe`).
 
 ## Projetos (solução `TbhBot.slnx`)
 | Projeto | O que é | UI? |

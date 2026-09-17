@@ -202,7 +202,7 @@ tema — todas as cores são hardcoded (ver tabela §3a). Significado das cores:
   decide texto/cor.
 - `event Action<string>? Log` → texto para a barra de status.
 
-### `PriceIndex` (`TbhBot.Core.Market`) — índice embutido, offline
+### `PriceIndex` (`TaskHeroX.Core.Market`) — índice embutido, offline
 - `Count` → nº de bases no índice (usado como guarda no `Toggle`).
 - `ResolveBase(IEnumerable<string> texts)` → dentre as linhas candidatas (as acima da grade), devolve a
   base conhecida: **match exato ganha na hora**; senão **fuzzy** (LCS ≈ `SequenceMatcher.ratio`) com
