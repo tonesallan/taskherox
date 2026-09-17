@@ -121,45 +121,76 @@ public static class Il2CppSemanticExtractor
     {
         ArgumentNullException.ThrowIfNull(classes);
 
-        var inventoryMatches = classes
-            .SelectMany(klass => klass.Fields
-                .Where(field => !field.IsStatic && InventorySaveListType.IsMatch(field.Type))
-                .Select(field => (Class: klass, Field: field)))
+        var perClass = classes
+            .Select(klass => new
+            {
+                Class = klass,
+                Inventory = klass.Fields
+                    .Where(field => !field.IsStatic && InventorySaveListType.IsMatch(field.Type))
+                    .ToArray(),
+                Stash = klass.Fields
+                    .Where(field => !field.IsStatic && StashSaveListType.IsMatch(field.Type))
+                    .ToArray(),
+            })
             .ToArray();
 
-        if (inventoryMatches.Length != 1)
-        {
-            offsets = null;
-            error = $"inventory slot field ambiguous ({inventoryMatches.Length})";
-            return false;
-        }
-
-        var stashMatches = classes
-            .SelectMany(klass => klass.Fields
-                .Where(field => !field.IsStatic && StashSaveListType.IsMatch(field.Type))
-                .Select(field => (Class: klass, Field: field)))
+        var pairedOwners = perClass
+            .Where(entry => entry.Inventory.Length > 0 && entry.Stash.Length > 0)
             .ToArray();
 
-        if (stashMatches.Length != 1)
+        if (pairedOwners.Length == 1)
+        {
+            var owner = pairedOwners[0];
+
+            if (owner.Inventory.Length != 1)
+            {
+                offsets = null;
+                error = $"inventory slot field ambiguous ({owner.Inventory.Length})";
+                return false;
+            }
+
+            if (owner.Stash.Length != 1)
+            {
+                offsets = null;
+                error = $"stash slot field ambiguous ({owner.Stash.Length})";
+                return false;
+            }
+
+            offsets = new InventorySlotOffsets(
+                owner.Inventory[0].Offset,
+                owner.Stash[0].Offset,
+                owner.Class.Name);
+            error = null;
+            return true;
+        }
+
+        if (pairedOwners.Length > 1)
         {
             offsets = null;
-            error = $"stash slot field ambiguous ({stashMatches.Length})";
+            error = $"inventory/stash owner ambiguous ({pairedOwners.Length})";
             return false;
         }
 
-        if (!ReferenceEquals(inventoryMatches[0].Class, stashMatches[0].Class))
+        int inventoryCount = perClass.Sum(entry => entry.Inventory.Length);
+        int stashCount = perClass.Sum(entry => entry.Stash.Length);
+
+        if (inventoryCount != 1)
         {
             offsets = null;
-            error = "inventory and stash fields belong to different classes";
+            error = $"inventory slot field ambiguous ({inventoryCount})";
             return false;
         }
 
-        offsets = new InventorySlotOffsets(
-            inventoryMatches[0].Field.Offset,
-            stashMatches[0].Field.Offset,
-            inventoryMatches[0].Class.Name);
-        error = null;
-        return true;
+        if (stashCount != 1)
+        {
+            offsets = null;
+            error = $"stash slot field ambiguous ({stashCount})";
+            return false;
+        }
+
+        offsets = null;
+        error = "inventory and stash fields belong to different classes";
+        return false;
     }
 
     public static bool TryExtractInventoryRootSymbols(
