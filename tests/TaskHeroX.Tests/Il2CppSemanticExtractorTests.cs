@@ -171,6 +171,61 @@ public class SaveRoot
     }
 
     [Fact]
+    public void TryExtractInventorySlotOffsets_PrefersUniqueClassContainingInventoryAndStash()
+    {
+        const string dump = """
+public class DecoySaveData
+{
+    public List<InventorySaveData> inventory; // 0x40
+}
+
+public class PlayerSaveData
+{
+    public List<InventorySaveData> inventory; // 0x88
+    public List<StashSaveData> stash; // 0x90
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventorySlotOffsets(
+            Il2CppDumpParser.Parse(dump),
+            out InventorySlotOffsets? offsets,
+            out string? error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(offsets);
+        Assert.Equal(0x88L, offsets.InventorySlotsOffset);
+        Assert.Equal(0x90L, offsets.StashSlotsOffset);
+        Assert.Equal("PlayerSaveData", offsets.DeclaringClass);
+    }
+
+    [Fact]
+    public void TryExtractInventorySlotOffsets_RejectsMultiplePairedOwners()
+    {
+        const string dump = """
+public class SaveRootA
+{
+    public List<InventorySaveData> inventory; // 0x80
+    public List<StashSaveData> stash; // 0x88
+}
+
+public class SaveRootB
+{
+    public List<InventorySaveData> inventory; // 0x90
+    public List<StashSaveData> stash; // 0x98
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventorySlotOffsets(
+            Il2CppDumpParser.Parse(dump),
+            out InventorySlotOffsets? offsets,
+            out string? error);
+
+        Assert.False(ok);
+        Assert.Null(offsets);
+        Assert.Equal("inventory/stash owner ambiguous (2)", error);
+    }
+
+    [Fact]
     public void TryExtractInventorySlotOffsets_RejectsAmbiguousInventoryFields()
     {
         const string dump = """
