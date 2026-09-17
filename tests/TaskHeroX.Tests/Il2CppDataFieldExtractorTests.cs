@@ -119,8 +119,10 @@ public class ItemSaveData
         IReadOnlyDictionary<string, long> result = Il2CppDataFieldExtractor.Extract(
             Il2CppDumpParser.Parse(dump));
 
-        // O legado cria byname por dict-comprehension (última classe vence) e usa next(...) no campo.
+        // O legado cria byname por dict-comprehension (última classe vence). O alias nomeado usa
+        // next(...), então pega o primeiro campo da classe escolhida; a cobertura Classe.Campo percorre
+        // todos os campos e sobrescreve a mesma chave, portanto o último campo duplicado vence.
         Assert.Equal(0x30L, result["itemsave_key"]);
-        Assert.Equal(0x30L, result["ItemSaveData.ItemKey"]);
+        Assert.Equal(0x34L, result["ItemSaveData.ItemKey"]);
     }
 }
