@@ -74,11 +74,52 @@ public class Monster : Enemy
     // RVA: 0x1700
     public virtual void hit(DamageInfo a, bool b = False) { }
 }
+
+public class InputManager
+{
+    // RVA: 0x1800
+    private void Update() { }
+}
+
+public class StageBox
+{
+    // RVA: 0x1900
+    public void click(PointerEventData.InputButton a) { }
+}
+
+public class mover : singleton<mover>
+{
+    // RVA: 0x1A00
+    public MoveResult move(MoveRequest a, Action<MoveResult> b) { }
+}
+
+public static class uw.Cube
+{
+    public static Dictionary<ERecipeType, List<uw>> recipes; // 0x20
+    // RVA: 0x1B00
+    public static void setType(EItemSynthesisType a) { }
+    // RVA: 0x1C00
+    public static bool setGrade(EGradeType a) { }
+    // RVA: 0x1D00
+    private static void setRecipe(uw a) { }
+    // RVA: 0x1E00
+    public static bool setLevelRecipe(uw a) { }
+    // RVA: 0x1F00
+    private static void build(int a, CubeInData b) { }
+    // RVA: 0x2000
+    public static EAddCubeResult add(ESlotType a, int b) { }
+    // RVA: 0x2100
+    public static void synthesize() { }
+    // RVA: 0x2200
+    private static InternalBucketCountResult bucketCount() { }
+    // RVA: 0x2300
+    public static Task TriggerCurrentRecipeLogic() { }
+}
 """;
 
         const string scriptJson = """
 {
-  "Addresses": [4096, 4352, 4608, 4864, 5120, 5376, 5632, 5888, 6144],
+  "Addresses": [4096,4352,4608,4864,5120,5376,5632,5888,6144,6400,6656,6912,7168,7424,7680,7936,8192,8448,8704,8960,9216,9472],
   "ScriptMetadata": [
     { "Name": "Uo_TypeInfo", "Address": "0x7000" },
     { "Name": "BalanceRoot_TypeInfo", "Address": "0x7100" },
@@ -97,8 +138,6 @@ public class Monster : Enemy
             [0x1300] = [0xC3],
             [0x1400] = [0x83, 0xF8, 0x01, 0x83, 0xF8, 0x03, 0xC3],
             [0x1500] = [0x83, 0xF8, 0x02, 0xC3],
-            [0x1600] = [0xC3],
-            [0x1700] = [0xC3],
         };
 
         bool ok = Il2CppFoundationExtractor.TryExtract(
@@ -123,8 +162,20 @@ public class Monster : Enemy
         Assert.Equal(0x7300L, offsets.Symbols["inv_klass_ti"]);
         Assert.Equal(0x7400L, offsets.Symbols["bau_ti"]);
         Assert.Equal("box", offsets.InvClass);
+        Assert.Equal("mover", offsets.RaClass);
         Assert.Equal(0x1600L, offsets.Symbols["izb"]);
         Assert.Equal(0x1700L, offsets.Symbols["gra"]);
+        Assert.Equal(0x1800L, offsets.Symbols["upd"]);
+        Assert.Equal(0x1900L, offsets.Symbols["llx"]);
+        Assert.Equal(0x1A00L, offsets.Symbols["iw"]);
+        Assert.Equal(0x1B00L, offsets.Symbols["ilo"]);
+        Assert.Equal(0x1C00L, offsets.Symbols["ili"]);
+        Assert.Equal(0x1D00L, offsets.Symbols["inf"]);
+        Assert.Equal(0x1E00L, offsets.Symbols["ima"]);
+        Assert.Equal(0x1F00L, offsets.Symbols["iog"]);
+        Assert.Equal(0x2000L, offsets.Symbols["ioa"]);
+        Assert.Equal(0x2100L, offsets.Symbols["ipu"]);
+        Assert.Equal(0x2300L, offsets.Symbols["imx"]);
         Assert.Equal(0x1100L, offsets.Symbols["jgk"]);
         Assert.Equal(0x1200L, offsets.Symbols["jgq"]);
         Assert.Equal(0x1300L, offsets.Symbols["jgd"]);
@@ -133,10 +184,9 @@ public class Monster : Enemy
         Assert.Equal(0x10L, offsets.Symbols["psd_common_off"]);
         Assert.Equal(0x64L, offsets.Symbols["commonsave_curstage"]);
 
-        // A composição já funciona, mas ainda não deve ser aceita como cache final enquanto faltarem
-        // os demais símbolos críticos do legado.
+        // Após os anchors textuais críticos, resta iuw antes de o contrato completo aceitar o cache.
         Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? validationError));
-        Assert.Equal("missing critical symbol: upd", validationError);
+        Assert.Equal("missing critical symbol: iuw", validationError);
     }
 
     private static byte[] BuildCalls(long startRva, params long[] targets)
@@ -160,7 +210,7 @@ public class Monster : Enemy
         const int optionalHeaderSize = 0xF0;
         const int sectionTable = peOffset + 24 + optionalHeaderSize;
         const int rawOffset = 0x200;
-        const int rawSize = 0x1000;
+        const int rawSize = 0x2000;
         const uint virtualAddress = 0x1000;
 
         var data = new byte[rawOffset + rawSize];
