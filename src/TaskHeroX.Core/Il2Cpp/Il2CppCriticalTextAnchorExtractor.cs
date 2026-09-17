@@ -38,7 +38,8 @@ public static class Il2CppCriticalTextAnchorExtractor
 
         var updateCandidates = inputManagers
             .SelectMany(klass => klass.Methods
-                .Where(method => Parse(method.Signature) is Il2CppMethodSignatureInfo parsed &&
+                .Where(method => string.Equals(method.Visibility, "private", StringComparison.Ordinal) &&
+                                 Parse(method.Signature) is Il2CppMethodSignatureInfo parsed &&
                                  !parsed.IsStatic &&
                                  parsed.ReturnType == "void" &&
                                  parsed.MethodName == "Update" &&
