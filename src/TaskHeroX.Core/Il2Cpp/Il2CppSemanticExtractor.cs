@@ -12,9 +12,17 @@ public sealed record StageStaticSymbols(
     long? UoCurrentCacheOffset);
 
 /// <summary>
-/// Primeiro grupo semântico portado do extrator legado. Mantém comportamento fail-closed:
-/// somente aceita a classe estática de stage quando ela é única e contém simultaneamente
-/// List&lt;StageCache&gt; e Dictionary&lt;int, StageCache&gt; estáticos.
+/// Offsets de slots de inventário/stash encontrados semanticamente em PlayerSaveData (ou classe
+/// equivalente), sem depender de nomes de campos ofuscados.
+/// </summary>
+public sealed record InventorySlotOffsets(
+    long InventorySlotsOffset,
+    long StashSlotsOffset,
+    string DeclaringClass);
+
+/// <summary>
+/// Grupos semânticos portados do extrator legado. Mantém comportamento fail-closed e não altera
+/// qualquer rota runtime existente.
 /// </summary>
 public static class Il2CppSemanticExtractor
 {
@@ -28,6 +36,14 @@ public static class Il2CppSemanticExtractor
 
     private static readonly Regex StageCacheType = new(
         @"^[\w\.]*\.?StageCache$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex InventorySaveListType = new(
+        @"^List<[\w\.]*\.?InventorySaveData>$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex StashSaveListType = new(
+        @"^List<[\w\.]*\.?StashSaveData>$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static bool TryExtractStageStaticSymbols(
@@ -75,6 +91,54 @@ public static class Il2CppSemanticExtractor
             typeInfo,
             dictionaryField.Offset,
             currentCacheField?.Offset);
+        error = null;
+        return true;
+    }
+
+    public static bool TryExtractInventorySlotOffsets(
+        IReadOnlyList<Il2CppDumpClass> classes,
+        out InventorySlotOffsets? offsets,
+        out string? error)
+    {
+        ArgumentNullException.ThrowIfNull(classes);
+
+        var inventoryMatches = classes
+            .SelectMany(klass => klass.Fields
+                .Where(field => !field.IsStatic && InventorySaveListType.IsMatch(field.Type))
+                .Select(field => (Class: klass, Field: field)))
+            .ToArray();
+
+        if (inventoryMatches.Length != 1)
+        {
+            offsets = null;
+            error = $"inventory slot field ambiguous ({inventoryMatches.Length})";
+            return false;
+        }
+
+        var stashMatches = classes
+            .SelectMany(klass => klass.Fields
+                .Where(field => !field.IsStatic && StashSaveListType.IsMatch(field.Type))
+                .Select(field => (Class: klass, Field: field)))
+            .ToArray();
+
+        if (stashMatches.Length != 1)
+        {
+            offsets = null;
+            error = $"stash slot field ambiguous ({stashMatches.Length})";
+            return false;
+        }
+
+        if (!ReferenceEquals(inventoryMatches[0].Class, stashMatches[0].Class))
+        {
+            offsets = null;
+            error = "inventory and stash fields belong to different classes";
+            return false;
+        }
+
+        offsets = new InventorySlotOffsets(
+            inventoryMatches[0].Field.Offset,
+            stashMatches[0].Field.Offset,
+            inventoryMatches[0].Class.Name);
         error = null;
         return true;
     }
