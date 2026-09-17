@@ -31,18 +31,33 @@ public static class Il2CppCriticalTextAnchorExtractor
         var result = new Il2CppCriticalTextAnchors();
 
         Il2CppDumpClass[] inputManagers = classes
-            .Where(klass => string.Equals(klass.Name, "InputManager", StringComparison.Ordinal))
+            .Where(klass =>
+                string.Equals(klass.Name, "InputManager", StringComparison.Ordinal) ||
+                klass.Name.EndsWith(".InputManager", StringComparison.Ordinal))
             .ToArray();
-        if (inputManagers.Length != 1 ||
-            !TryUniqueMethod(inputManagers[0].Methods,
-                parsed => !parsed.IsStatic && parsed.ReturnType == "void" && parsed.MethodName == "Update" && parsed.ParameterTypes.Count == 0,
-                out long upd))
+
+        var updateCandidates = inputManagers
+            .SelectMany(klass => klass.Methods
+                .Where(method => Parse(method.Signature) is Il2CppMethodSignatureInfo parsed &&
+                                 !parsed.IsStatic &&
+                                 parsed.ReturnType == "void" &&
+                                 parsed.MethodName == "Update" &&
+                                 parsed.ParameterTypes.Count == 0)
+                .Select(method => (Class: klass, Method: method)))
+            .ToArray();
+
+        if (updateCandidates.Length != 1)
         {
             anchors = null;
-            error = "InputManager.Update anchor ambiguous";
+            string details = string.Join(
+                ", ",
+                updateCandidates.Select(candidate =>
+                    $"{candidate.Class.Name}@0x{candidate.Method.Rva:X}"));
+            error = $"InputManager.Update anchor ambiguous ({updateCandidates.Length})" +
+                    (details.Length > 0 ? $": {details}" : string.Empty);
             return false;
         }
-        result.Symbols["upd"] = upd;
+        result.Symbols["upd"] = updateCandidates[0].Method.Rva;
 
         Il2CppDumpClass[] stageBoxes = classes
             .Where(klass => string.Equals(klass.Name, "StageBox", StringComparison.Ordinal))
