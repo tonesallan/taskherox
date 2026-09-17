@@ -182,6 +182,55 @@ public static class Il2CppDisassembly
         return result;
     }
 
+    /// <summary>
+    /// Retorna apenas imediatos de instruções <c>cmp REG, IMM</c>. Isso evita confundir compares de
+    /// memória/metadados com a classificação semântica dos validadores de stage.
+    /// </summary>
+    public static IReadOnlySet<long> DirectRegisterCompareImmediates(
+        Il2CppPeImage image,
+        IReadOnlyList<long> sortedAddresses,
+        long rva)
+    {
+        var values = new HashSet<long>();
+        foreach (Instruction instruction in Decode(image, sortedAddresses, rva))
+        {
+            if (instruction.Mnemonic != Mnemonic.Cmp || instruction.OpCount < 2 ||
+                instruction.Op0Kind != OpKind.Register || !IsImmediate(instruction.Op1Kind))
+                continue;
+
+            values.Add(unchecked((long)instruction.GetImmediate(1)));
+        }
+        return values;
+    }
+
+    /// <summary>
+    /// Cross-check simples para constantes imediatas em instruções específicas, equivalente aos
+    /// checks do legado sobre o texto do operando sem depender de formatter/string parsing.
+    /// </summary>
+    public static bool ContainsImmediate(
+        Il2CppPeImage image,
+        IReadOnlyList<long> sortedAddresses,
+        long rva,
+        long value,
+        params Mnemonic[] mnemonics)
+    {
+        HashSet<Mnemonic> accepted = [.. mnemonics];
+        foreach (Instruction instruction in Decode(image, sortedAddresses, rva))
+        {
+            if (!accepted.Contains(instruction.Mnemonic))
+                continue;
+
+            for (int operand = 0; operand < instruction.OpCount; operand++)
+            {
+                if (!IsImmediate(instruction.GetOpKind(operand)))
+                    continue;
+                if (unchecked((long)instruction.GetImmediate(operand)) == value)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     public static IReadOnlyList<Mnemonic> MnemonicShape(
         Il2CppPeImage image,
         IReadOnlyList<long> sortedAddresses,
@@ -189,4 +238,15 @@ public static class Il2CppDisassembly
         Decode(image, sortedAddresses, rva)
             .Select(instruction => instruction.Mnemonic)
             .ToArray();
+
+    private static bool IsImmediate(OpKind kind) => kind is
+        OpKind.Immediate8 or
+        OpKind.Immediate8_2nd or
+        OpKind.Immediate16 or
+        OpKind.Immediate32 or
+        OpKind.Immediate64 or
+        OpKind.Immediate8to16 or
+        OpKind.Immediate8to32 or
+        OpKind.Immediate8to64 or
+        OpKind.Immediate32to64;
 }
