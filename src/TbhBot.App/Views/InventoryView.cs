@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TbhBot.App.Services;
-using TbhBot.Core.Game;
+using TaskHeroX.Core.Game;
 
 namespace TbhBot.App.Views;
 

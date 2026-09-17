@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using TaskHeroX.Core.Il2Cpp;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Modos EVOLUÇÃO e AUTO-BOSS (porta de _do_evolve / _do_autoboss / _boss_run / _wait_boss_done do

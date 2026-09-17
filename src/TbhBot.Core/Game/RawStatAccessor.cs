@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Acesso controlado a StatType que ainda não fazem parte dos 25 campos do editor principal.

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Leitura do INVENTARIO COMPLETO (inventario + baus) com nome e grade por item — alimenta a aba Inventory.

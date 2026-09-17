@@ -1,4 +1,4 @@
-using TbhBot.Core.Game;
+using TaskHeroX.Core.Game;
 
 namespace TbhBot.App.Services;
 

@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Auto-fuse / síntese do cubo (porta de _do_synth + os helpers do tbh_core.py). UMA fusão por chamada.

@@ -1,4 +1,4 @@
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Executa chamadas na MAIN-THREAD do jogo (necessário para ações Unity async/UI: abrir caixa, mover item,

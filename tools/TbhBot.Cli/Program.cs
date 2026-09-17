@@ -122,7 +122,7 @@ if (args.Contains("--evolve"))
 
     // 1) a corrente Next sobe de 1 em 1 até 4309? Testa do estágio ATUAL e do 1-1 Normal (1101) —
     //    o caso que o usuário descreveu. É só caminhada na tabela: não navega, não muda nada no jogo.
-    static (int End, int Steps, List<int> Path) Walk(int from, Dictionary<int, TbhBot.Core.Game.StageInfo> t)
+    static (int End, int Steps, List<int> Path) Walk(int from, Dictionary<int, TaskHeroX.Core.Game.StageInfo> t)
     {
         int node = from, steps = 0; var path = new List<int>();
         while (node > 0 && node < 4309 && steps < 500 && t.TryGetValue(node, out var ni))
@@ -504,13 +504,13 @@ if (args.Contains("--features"))
     {
         var rows = kv.Value;
         int status = rows.Count > 0 ? rows[^1].Status : -1;
-        Console.WriteLine($"      rune {kv.Key}: {rows.Count} níveis · efeito='{TbhBot.Core.Game.RuneLevels.EffectName(status)}'{(TbhBot.Core.Game.RuneLevels.IsPercent(status) ? "%" : "")} · L1 val={rows[0].Value} custo={rows[0].Cost}");
+        Console.WriteLine($"      rune {kv.Key}: {rows.Count} níveis · efeito='{TaskHeroX.Core.Game.RuneLevels.EffectName(status)}'{(TaskHeroX.Core.Game.RuneLevels.IsPercent(status) ? "%" : "")} · L1 val={rows[0].Value} custo={rows[0].Cost}");
     }
     var inv = eng.Inventory.List();
     bool named = inv.Any(i => !i.Name.StartsWith('#'));
     Console.WriteLine($"[{(inv.Count > 0 && named ? "PASS" : "FAIL")}] Inventory: {inv.Count} itens (nomes resolvidos={named})");
     foreach (var it in inv.OrderByDescending(i => i.Unit * i.Qty).Take(5))
-        Console.WriteLine($"      '{it.Name}' [{TbhBot.Core.Game.Inventory.GradeName(it.Grade)}] x{it.Qty}  ${it.Unit:0.00} = ${it.Unit * it.Qty:0.00}");
+        Console.WriteLine($"      '{it.Name}' [{TaskHeroX.Core.Game.Inventory.GradeName(it.Grade)}] x{it.Qty}  ${it.Unit:0.00} = ${it.Unit * it.Qty:0.00}");
     var stt = eng.StageNav.StageTable();
     Console.WriteLine($"[{(stt.Count >= 100 ? "PASS" : "FAIL")}] StageTable: {stt.Count} estágios");
     return;
@@ -561,7 +561,7 @@ if (args.Contains("--klass"))
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     long ex = TaskHeroX.Core.Memory.RemoteCall.ResolveExport(eng.Memory, "il2cpp_class_from_name");
     Console.WriteLine($"[{(ex != 0 ? "PASS" : "FAIL")}] export il2cpp_class_from_name = 0x{ex:X}");
-    var api = new TbhBot.Core.Game.Il2CppApi(eng.Memory);
+    var api = new TaskHeroX.Core.Game.Il2CppApi(eng.Memory);
     long sb = api.ClassFromName("TaskbarHero.UI", "StageBox");
     Console.WriteLine($"[{(sb != 0 ? "PASS" : "FAIL")}] StageBox klass = 0x{sb:X}  (vivo={eng.Target.IsAlive()})");
     return;
@@ -574,7 +574,7 @@ if (args.Contains("--dispatch"))
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     Console.WriteLine($"attach pid={eng.Target.ProcessId}  hash={TaskHeroX.Core.Il2Cpp.BuildInfo.DllHash(eng.Target.ModulePath)}");
-    var disp = eng.Dispatcher as TbhBot.Core.Game.RealDispatcher;
+    var disp = eng.Dispatcher as TaskHeroX.Core.Game.RealDispatcher;
     if (disp is null) { Console.WriteLine("[x] dispatcher não é RealDispatcher"); return; }
     Console.WriteLine($"IsReady antes = {disp.IsReady} (instala preguiçosamente no 1º comando)");
     for (int i = 0; i < 5; i++)

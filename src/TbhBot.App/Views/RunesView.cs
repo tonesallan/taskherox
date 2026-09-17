@@ -12,7 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using TbhBot.App.Services;
-using TbhBot.Core.Game;
+using TaskHeroX.Core.Game;
 
 namespace TbhBot.App.Views;
 

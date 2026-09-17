@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using TbhBot.Core;
-using TbhBot.Core.Game;
+using TaskHeroX.Core.Game;
 using TaskHeroX.Core.Il2Cpp;
 
 namespace TaskHeroX.Core.Diagnostics;

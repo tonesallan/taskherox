@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Editor de stats e dados do estágio.

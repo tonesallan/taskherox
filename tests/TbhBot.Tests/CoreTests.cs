@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using TbhBot.Core;
 using TaskHeroX.Core.Diagnostics;
-using TbhBot.Core.Game;
+using TaskHeroX.Core.Game;
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 using TaskHeroX.Core.Update;

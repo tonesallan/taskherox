@@ -1,6 +1,6 @@
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>Definição estática de UMA runa (da RuneInfoData). Alimenta a ÁRVORE de runas + o clamp por-runa.</summary>
 /// <param name="Key">RuneKey (@0x30) — a mesma chave do RuneSaveData.</param>

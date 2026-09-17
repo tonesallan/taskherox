@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Auto-stash (porta de _ra/_slot_objs/_do_stash_bulk do tbh_core.py). Resolve o singleton "ra" (gerente

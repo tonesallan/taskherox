@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Memory;
 using TaskHeroX.Core.Native;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// API IL2CPP (exports de GameAssembly.dll) via <see cref="RemoteCall"/> — resolve o Il2CppClass* de um

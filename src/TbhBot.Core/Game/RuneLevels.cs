@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>Uma linha de RuneLevelInfoData: nível, valor do efeito nesse nível, custo (ouro) e o EAccountStatus (efeito).</summary>
 public sealed record RuneLevelRow(int Level, int Value, int Cost, int Status);

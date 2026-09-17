@@ -3,7 +3,7 @@ using Iced.Intel;
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Dispatcher main-thread REAL (porta de _install_dispatch/_dispatch_code/_dispatch do tbh_core.py).

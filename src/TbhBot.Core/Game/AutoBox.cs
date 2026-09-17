@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 /// <summary>
 /// Auto-abrir caixas (porta de _find_stageboxes/_valid_stagebox/_iuw_count + o loop de abertura do

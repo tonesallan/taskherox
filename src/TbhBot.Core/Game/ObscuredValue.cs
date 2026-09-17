@@ -1,7 +1,7 @@
 using System;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 // Porta de _obs_int/_obs_set (tbh_core.py ~1954-1972).
 // ObscuredInt do Anti-Cheat Toolkit ocupa 16 bytes: hash@0, hidden@4, key@8, fake@0xC.

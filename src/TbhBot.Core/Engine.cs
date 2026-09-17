@@ -1,4 +1,4 @@
-using TbhBot.Core.Game;
+using TaskHeroX.Core.Game;
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
@@ -15,7 +15,7 @@ public sealed class Engine : IDisposable
     public SymbolTable     Symbols  { get; private set; } = null!;
     public MemoryScanner   Scanner  { get; private set; } = null!;
     public Il2CppResolver  Resolver { get; private set; } = null!;
-    public Game.Cheats     Cheats   { get; private set; } = null!;
+    public Cheats          Cheats   { get; private set; } = null!;
     public StatEditor      Stats    { get; private set; } = null!;
     public SaveData        Save     { get; private set; } = null!;
     public Il2CppApi       Il2Cpp   { get; private set; } = null!;
@@ -114,10 +114,10 @@ public sealed class Engine : IDisposable
         OffsetsLoaded = loaded;
         Scanner    = new MemoryScanner(Memory);
         Resolver   = new Il2CppResolver(Memory, Symbols, Scanner);
-        Cheats     = new Game.Cheats(Memory, Symbols, Scanner);
+        Cheats     = new Cheats(Memory, Symbols, Scanner);
         Stats      = new StatEditor(Memory, Scanner, Symbols, Resolver);
         Save       = new SaveData(Memory, Symbols, Resolver);
-        var disp   = new Game.RealDispatcher(Memory, Symbols) { Log = Emit };
+        var disp   = new RealDispatcher(Memory, Symbols) { Log = Emit };
         Dispatcher = disp;
         Il2Cpp     = new Il2CppApi(Memory);
         AutoBox    = new AutoBox(Memory, Symbols, Scanner, Il2Cpp, disp) { Log = Emit };

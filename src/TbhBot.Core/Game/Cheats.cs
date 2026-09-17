@@ -1,7 +1,7 @@
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core.Game;
+namespace TaskHeroX.Core.Game;
 
 // Cheats por patch de código: ACTk (NOP do detector) e Godmode (prólogo -> ret). Guarda os bytes
 // originais p/ restaurar no desligar. (Hitkill e Speedhack foram removidos a pedido do usuário.)
