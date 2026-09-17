@@ -274,7 +274,13 @@ public static class Il2CppSemanticExtractor
             return false;
         }
 
-        var itemListMatches = classes
+        var playerSaveClasses = classes
+            .Where(klass =>
+                string.Equals(klass.Name, "PlayerSaveData", StringComparison.Ordinal) ||
+                klass.Name.EndsWith(".PlayerSaveData", StringComparison.Ordinal))
+            .ToArray();
+
+        var itemListMatches = playerSaveClasses
             .SelectMany(klass => klass.Fields
                 .Where(field => !field.IsStatic && ItemSaveDataListType.IsMatch(field.Type))
                 .Select(field => (Class: klass, Field: field)))
@@ -283,7 +289,7 @@ public static class Il2CppSemanticExtractor
         if (itemListMatches.Length != 1)
         {
             symbols = null;
-            error = $"ItemSaveData list ambiguous ({itemListMatches.Length})";
+            error = $"PlayerSaveData ItemSaveData list ambiguous ({itemListMatches.Length})";
             return false;
         }
 
