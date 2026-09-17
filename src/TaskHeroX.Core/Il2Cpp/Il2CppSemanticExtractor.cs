@@ -21,6 +21,17 @@ public sealed record InventorySlotOffsets(
     string DeclaringClass);
 
 /// <summary>
+/// Metadados do singleton de inventário e da lista mestre de itens. O resultado preserva as duas
+/// rotas do legado: TypeInfo da classe concreta e TypeInfo da base genérica, exigindo ao menos uma.
+/// </summary>
+public sealed record InventoryRootSymbols(
+    string InventoryClass,
+    long PlayerSaveDataOffset,
+    long ItemSaveDataListOffset,
+    long? InventoryClassTypeInfo,
+    long? GenericSingletonTypeInfo);
+
+/// <summary>
 /// Grupos semânticos portados do extrator legado. Mantém comportamento fail-closed e não altera
 /// qualquer rota runtime existente.
 /// </summary>
@@ -44,6 +55,14 @@ public static class Il2CppSemanticExtractor
 
     private static readonly Regex StashSaveListType = new(
         @"^List<[\w\.]*\.?StashSaveData>$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex PlayerSaveDataType = new(
+        @"^[\w\.]*\.?PlayerSaveData$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex ItemSaveDataListType = new(
+        @"^List<[\w\.]*\.?ItemSaveData>$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static bool TryExtractStageStaticSymbols(
@@ -139,6 +158,96 @@ public static class Il2CppSemanticExtractor
             inventoryMatches[0].Field.Offset,
             stashMatches[0].Field.Offset,
             inventoryMatches[0].Class.Name);
+        error = null;
+        return true;
+    }
+
+    public static bool TryExtractInventoryRootSymbols(
+        IReadOnlyList<Il2CppDumpClass> classes,
+        Il2CppScriptIndex script,
+        out InventoryRootSymbols? symbols,
+        out string? error)
+    {
+        ArgumentNullException.ThrowIfNull(classes);
+        ArgumentNullException.ThrowIfNull(script);
+
+        var playerSaveMatches = classes
+            .SelectMany(klass => klass.Fields
+                .Where(field => !field.IsStatic && PlayerSaveDataType.IsMatch(field.Type))
+                .Select(field => (Class: klass, Field: field)))
+            .ToArray();
+
+        if (playerSaveMatches.Length != 1)
+        {
+            symbols = null;
+            error = $"PlayerSaveData owner ambiguous ({playerSaveMatches.Length})";
+            return false;
+        }
+
+        Il2CppDumpClass inventoryClass = playerSaveMatches[0].Class;
+        string escapedClass = Regex.Escape(inventoryClass.Name);
+        var selfSingletonPattern = new Regex(
+            @":\s*[\w\.]+<" + escapedClass + @">(?:\s|$)",
+            RegexOptions.CultureInvariant);
+
+        if (!selfSingletonPattern.IsMatch(inventoryClass.Declaration))
+        {
+            symbols = null;
+            error = $"inventory owner {inventoryClass.Name} is not a self-generic singleton";
+            return false;
+        }
+
+        var itemListMatches = classes
+            .SelectMany(klass => klass.Fields
+                .Where(field => !field.IsStatic && ItemSaveDataListType.IsMatch(field.Type))
+                .Select(field => (Class: klass, Field: field)))
+            .ToArray();
+
+        if (itemListMatches.Length != 1)
+        {
+            symbols = null;
+            error = $"ItemSaveData list ambiguous ({itemListMatches.Length})";
+            return false;
+        }
+
+        long? concreteTypeInfo = script.TryGetMetadataAddress(
+            inventoryClass.Name + "_TypeInfo",
+            out long concreteAddress)
+            ? concreteAddress
+            : null;
+
+        Regex genericTypeInfoPattern = new(
+            @"^[\w\.]+<" + escapedClass + @">_TypeInfo$",
+            RegexOptions.CultureInvariant);
+
+        var genericMatches = script.MetadataAddresses
+            .Where(entry => genericTypeInfoPattern.IsMatch(entry.Key))
+            .ToArray();
+
+        if (genericMatches.Length > 1)
+        {
+            symbols = null;
+            error = $"generic inventory TypeInfo ambiguous ({genericMatches.Length})";
+            return false;
+        }
+
+        long? genericTypeInfo = genericMatches.Length == 1
+            ? genericMatches[0].Value
+            : null;
+
+        if (concreteTypeInfo is null && genericTypeInfo is null)
+        {
+            symbols = null;
+            error = "inventory TypeInfo missing";
+            return false;
+        }
+
+        symbols = new InventoryRootSymbols(
+            inventoryClass.Name,
+            playerSaveMatches[0].Field.Offset,
+            itemListMatches[0].Field.Offset,
+            concreteTypeInfo,
+            genericTypeInfo);
         error = null;
         return true;
     }
