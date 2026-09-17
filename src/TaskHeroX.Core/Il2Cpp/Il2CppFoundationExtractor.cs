@@ -1,9 +1,9 @@
 namespace TaskHeroX.Core.Il2Cpp;
 
 /// <summary>
-/// Compõe os grupos já portados em um único resultado intermediário. Esta classe ainda não representa
-/// o extrator final: símbolos críticos adicionais continuam pendentes e a aceitação final continua
-/// sendo responsabilidade de <see cref="Il2CppOffsetCache.TryValidate"/>.
+/// Compõe os grupos já portados em um único resultado intermediário. A aceitação final continua sob
+/// responsabilidade de <see cref="Il2CppOffsetCache.TryValidate"/>; neste estágio falta o anchor
+/// disassembly-backed de <c>iuw</c> e outros símbolos opcionais/runtime.
 /// </summary>
 public static class Il2CppFoundationExtractor
 {
@@ -66,6 +66,16 @@ public static class Il2CppFoundationExtractor
         foreach ((string key, long value) in Il2CppDataFieldExtractor.Extract(classes))
             result.Symbols[key] = value;
 
+        if (!Il2CppCriticalTextAnchorExtractor.TryExtract(
+                classes, out Il2CppCriticalTextAnchors? critical, out error) || critical is null)
+        {
+            offsets = null;
+            return false;
+        }
+        foreach ((string key, long value) in critical.Symbols)
+            result.Symbols[key] = value;
+        result.RaClass = critical.MoveManagerClass;
+
         if (!Il2CppMethodAnchorExtractor.TryExtractItemInfoGetter(classes, out long izb))
         {
             offsets = null;
@@ -94,7 +104,6 @@ public static class Il2CppFoundationExtractor
         if (stageHub.JgcType2 is long type2)
             result.Symbols["jgc_type2"] = type2;
 
-        // Guard estrutural: o pipeline novo nunca deve reintroduzir o nome ambíguo antigo.
         if (result.Symbols.ContainsKey("jgc"))
         {
             offsets = null;
