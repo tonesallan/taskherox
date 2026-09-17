@@ -37,8 +37,8 @@ sem tocar em código.
 ## Validação
 
 ```bash
-dotnet run --project tools/TbhBot.Cli -- --feed <hash>      # baixa e valida
-dotnet run --project tools/TbhBot.Cli -- --e2e             # 19 checagens ao vivo
+dotnet run --project tools/TaskHeroX.Cli -- --feed <hash>      # baixa e valida
+dotnet run --project tools/TaskHeroX.Cli -- --e2e             # 19 checagens ao vivo
 ```
 
 O painel só aceita o JSON se ele carregar e tiver `gra` + `uo_ti` — download pela metade ou página de

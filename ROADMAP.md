@@ -21,7 +21,7 @@ Legenda: 🟢 feito · 🟡 em andamento · ⚪ pendente
 - Solução `TbhBot` (Core lib + App WPF + Cli de teste), `Directory.Build.props` (x64/nullable/unsafe), gitignore/editorconfig.
 - Camada de memória mínima: `ProcessTarget` (attach) + `MemoryAccess` (Read/Write/**ReadArray**).
 - CLI de benchmark (sequencial vs batch).
-- **Pronto quando:** `dotnet run --project tools/TbhBot.Cli` attacha no jogo e imprime o speedup do batch.
+- **Pronto quando:** `dotnet run --project tools/TaskHeroX.Cli` attacha no jogo e imprime o speedup do batch.
 
 ## Fase 1 — Núcleo de memória 🟢
 **Meta:** endurecer a base de leitura antes de qualquer feature.
@@ -85,5 +85,5 @@ Legenda: 🟢 feito · 🟡 em andamento · ⚪ pendente
 - **UI:** WPF (nativo, single-file trivial). Alternativa moderna: **Avalonia** (MVVM + theming melhor para o
   tema custom + canvas) — trocável na Fase 5 sem tocar no Core.
 - **Core sem UI:** todo o conhecimento sensível (anti-cheat, ObscuredInt, offsets) fica em `TaskHeroX.Core`,
-  testável pelo `TbhBot.Cli` sem abrir janela.
+  testável pelo `TaskHeroX.Cli` sem abrir janela.
 - **Regra do force-close:** stage/cube continuam "recarrega uma vez" (ObscuredInt/ACTk); runas seguem ao vivo.

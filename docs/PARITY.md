@@ -42,7 +42,7 @@ Legenda: ✅ feito · 🟡 parcial · ⏸ adiado (documentado) · ⚪ pendente
 | Auto-update (troca o exe) | ✅ | ✅ | `Update/AutoUpdate` (trilho de release C#) |
 | Publish single-file | ✅ | ✅ | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true` |
 | **Price overlay (OCR)** | ✅ | ⏸ | opcional; ver abaixo |
-| Testes | — | ✅ | `tests/TbhBot.Tests` (ObscuredValue/GameConstants/SymbolTable) |
+| Testes | — | ✅ | `tests/TaskHeroX.Tests` (ObscuredValue/GameConstants/SymbolTable) |
 
 ## Adiados — por quê e o que falta
 1. **Dispatcher main-thread** (code-cave em `InputManager.Update`): precisa disassembler (Iced) + shellcode +
