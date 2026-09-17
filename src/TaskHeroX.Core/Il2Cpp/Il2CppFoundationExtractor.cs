@@ -113,6 +113,17 @@ public static class Il2CppFoundationExtractor
         if (stageHub.JgcType2 is long type2)
             result.Symbols["jgc_type2"] = type2;
 
+        if (!Il2CppStageRuntimeFieldExtractor.TryExtract(
+                classes, script, image, stageStatic, stageHub,
+                out StageRuntimeFieldSymbols? stageRuntime, out error) || stageRuntime is null)
+        {
+            offsets = null;
+            return false;
+        }
+        result.Symbols["uo_max"] = stageRuntime.UoMaxOffset;
+        result.Symbols["uo_cur"] = stageRuntime.UoCurrentOffset;
+        result.Symbols["uo_wave"] = stageRuntime.UoWaveOffset;
+
         if (result.Symbols.ContainsKey("jgc"))
         {
             offsets = null;
