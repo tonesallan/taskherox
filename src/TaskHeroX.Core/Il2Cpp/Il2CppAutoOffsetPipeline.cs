@@ -51,6 +51,18 @@ public static class Il2CppAutoOffsetPipeline
                 "IL2CPP auto-offset extraction failed: " + (extractionError ?? "unknown extraction error"));
         }
 
+        return FinalizeOffsets(offsets);
+    }
+
+    /// <summary>
+    /// Último gate antes de um cache poder ser persistido: exige o contrato crítico completo e só
+    /// então serializa o JSON determinístico/versionado. Mantido separado para testes de rejeição e
+    /// para comparação de fixtures sem executar o dumper.
+    /// </summary>
+    public static Il2CppAutoOffsetPipelineResult FinalizeOffsets(Il2CppExtractedOffsets offsets)
+    {
+        ArgumentNullException.ThrowIfNull(offsets);
+
         if (!Il2CppOffsetCache.TryValidate(offsets, out string? validationError))
         {
             throw new InvalidDataException(
