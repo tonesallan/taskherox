@@ -39,7 +39,10 @@ public class StageNode
 """;
 
         Il2CppScriptIndex script = Il2CppScriptIndex.Parse("""
-{ "Addresses": [4096,4352,4608,4864,5120,5632] }
+{
+  "Addresses": [4096,4352,4608,4864,5120,5632],
+  "ScriptMetadata": [{ "Name": "Uo_TypeInfo", "Address": "0x7000" }]
+}
 """);
 
         var functions = new Dictionary<long, byte[]>
@@ -108,7 +111,10 @@ public class StageNode
 """;
 
         Il2CppScriptIndex script = Il2CppScriptIndex.Parse("""
-{ "Addresses": [4096,4352,4608,4864,5120] }
+{
+  "Addresses": [4096,4352,4608,4864,5120],
+  "ScriptMetadata": [{ "Name": "Uo_TypeInfo", "Address": "0x7000" }]
+}
 """);
 
         var functions = new Dictionary<long, byte[]>
