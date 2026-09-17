@@ -15,6 +15,79 @@ if (args.Length >= 2 && args[0] == "--verify-offsets")
     return;
 }
 
+// Extração C# opt-in: executa Il2CppDumper -> extrator -> validação -> JSON sem alterar o Engine.
+// Uso:
+//   --extract-offsets <Il2CppDumper.exe> <GameAssembly.dll> <global-metadata.dat> [expected.json] [output.json]
+// Se expected.json for informado, compara semanticamente com um cache histórico; o alias jgc -> jgc_type13
+// é tratado pelo comparador sem reintroduzir generic jgc na saída nova.
+if (args.Length >= 4 && args[0] == "--extract-offsets")
+{
+    var inputs = new TaskHeroX.Core.Il2Cpp.Il2CppDumperInputs(args[1], args[2], args[3]);
+
+    try
+    {
+        Console.WriteLine("[1/3] executando pipeline C# de auto-offset...");
+        var result = await TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetPipeline.RunAsync(inputs);
+
+        Console.WriteLine("[2/3] extração validada");
+        foreach (string key in new[]
+        {
+            "gra", "upd", "llx", "iw", "iuw", "izb",
+            "uo_ti", "uo_dict", "uo_cur_cache", "uo_max", "uo_cur", "uo_wave",
+            "jgk", "jgq", "jgd", "jgc_type13", "jgc_type2",
+            "inv_slots_off", "stash_off", "inv_psd_off", "inv_list_off"
+        })
+        {
+            if (result.Offsets.Symbols.TryGetValue(key, out long value))
+                Console.WriteLine($"  {key,-20} 0x{value:X}");
+        }
+
+        Console.WriteLine($"  inv_class            {result.Offsets.InvClass ?? "—"}");
+        Console.WriteLine($"  ra_class             {result.Offsets.RaClass ?? "—"}");
+        Console.WriteLine($"  generic jgc?         {result.Offsets.Symbols.ContainsKey("jgc")}");
+
+        if (args.Length >= 5 && File.Exists(args[4]))
+        {
+            string expected = await File.ReadAllTextAsync(args[4]);
+            TaskHeroX.Core.Il2Cpp.Il2CppOffsetParityReport parity =
+                TaskHeroX.Core.Il2Cpp.Il2CppOffsetParityComparer.Compare(result.Offsets, expected);
+
+            if (!parity.IsMatch)
+            {
+                Console.WriteLine("[FAIL] divergências contra o cache esperado:");
+                foreach (var mismatch in parity.Mismatches)
+                    Console.WriteLine(
+                        $"  {mismatch.GeneratedKey}={mismatch.GeneratedValue ?? "—"} " +
+                        $"!= {mismatch.ExpectedKey}={mismatch.ExpectedValue ?? "—"}");
+                Environment.ExitCode = 2;
+                return;
+            }
+
+            Console.WriteLine("[PASS] paridade com o cache esperado");
+        }
+
+        if (args.Length >= 6)
+        {
+            string output = Path.GetFullPath(args[5]);
+            await File.WriteAllTextAsync(output, result.CacheJson);
+            Console.WriteLine($"[3/3] JSON gerado: {output}");
+        }
+        else
+        {
+            Console.WriteLine("[3/3] JSON validado em memória (nenhum arquivo gravado)");
+        }
+
+        Console.WriteLine("[PASS] pipeline C# concluído sem alterar o runtime");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("[FAIL] " + ex.Message);
+        Environment.ExitCode = 1;
+    }
+
+    return;
+}
+
 // Verifica que os offsets estão EMBUTIDOS no assembly do Core e carregam (não precisa do jogo).
 if (args.Contains("--verify-embedded"))
 {
