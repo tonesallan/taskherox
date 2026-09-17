@@ -199,6 +199,35 @@ public class PlayerSaveData
     }
 
     [Fact]
+    public void TryExtractInventorySlotOffsets_PrefersCanonicalPlayerSaveDataWhenTwoOwnersPair()
+    {
+        const string dump = """
+public class SnapshotSaveData
+{
+    public List<InventorySaveData> inventory; // 0x40
+    public List<StashSaveData> stash; // 0x48
+}
+
+public class PlayerSaveData
+{
+    public List<InventorySaveData> inventory; // 0x88
+    public List<StashSaveData> stash; // 0x90
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventorySlotOffsets(
+            Il2CppDumpParser.Parse(dump),
+            out InventorySlotOffsets? offsets,
+            out string? error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(offsets);
+        Assert.Equal(0x88L, offsets.InventorySlotsOffset);
+        Assert.Equal(0x90L, offsets.StashSlotsOffset);
+        Assert.Equal("PlayerSaveData", offsets.DeclaringClass);
+    }
+
+    [Fact]
     public void TryExtractInventorySlotOffsets_RejectsMultiplePairedOwners()
     {
         const string dump = """
@@ -222,7 +251,7 @@ public class SaveRootB
 
         Assert.False(ok);
         Assert.Null(offsets);
-        Assert.Equal("inventory/stash owner ambiguous (2)", error);
+        Assert.Equal("inventory/stash owner ambiguous (2): SaveRootA[inv=1,stash=1], SaveRootB[inv=1,stash=1]", error);
     }
 
     [Fact]
