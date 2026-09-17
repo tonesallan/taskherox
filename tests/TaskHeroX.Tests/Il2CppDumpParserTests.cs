@@ -52,11 +52,13 @@ public class InventorySaveData // TypeDefIndex: 1234
             {
                 Assert.Equal(0x1234, method.Rva);
                 Assert.Equal("void Refresh()", method.Signature);
+                Assert.Equal("public", method.Visibility);
             },
             method =>
             {
                 Assert.Equal(0x5678, method.Rva);
                 Assert.Equal("static int Count(System.Int32 value)", method.Signature);
+                Assert.Equal("private", method.Visibility);
             });
     }
 
@@ -83,6 +85,7 @@ public class Second
         Il2CppDumpMethod method = Assert.Single(classes[1].Methods);
         Assert.Equal(0x2222, method.Rva);
         Assert.Equal("void WithRva()", method.Signature);
+        Assert.Equal("public", method.Visibility);
     }
 
     [Fact]
