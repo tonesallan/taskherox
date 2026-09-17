@@ -3,7 +3,7 @@ using TaskHeroX.Core;
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Market;
 
-namespace TbhBot.Cli;
+namespace TaskHeroX.Cli;
 
 /// <summary>
 /// Teste ponta-a-ponta AO VIVO de todas as funcionalidades do engine (o que as abas do painel usam).

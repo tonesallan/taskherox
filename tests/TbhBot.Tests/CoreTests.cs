@@ -8,7 +8,7 @@ using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 using TaskHeroX.Core.Update;
 
-namespace TbhBot.Tests;
+namespace TaskHeroX.Tests;
 
 public class CoreTests
 {

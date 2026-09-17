@@ -599,11 +599,11 @@ if (args.Contains("--e2e"))
     string cacheDir = (i >= 0 && i + 1 < args.Length)
         ? args[i + 1]
         : @"d:\SteamLibrary\steamapps\common\TaskbarHero\tbh_bot\_cache_bundle";
-    await TbhBot.Cli.E2E.RunAsync(new TaskHeroX.Core.Engine(), cacheDir);
+    await TaskHeroX.Cli.E2E.RunAsync(new TaskHeroX.Core.Engine(), cacheDir);
     return;
 }
 
-Console.WriteLine("== TbhBot.Cli — smoke das Fases 0-4 ==\n");
+Console.WriteLine("== TaskHeroX.Cli — smoke das Fases 0-4 ==\n");
 
 using var engine = new Engine();
 engine.Log += m => Console.WriteLine($"  [engine] {m}");
