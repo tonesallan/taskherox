@@ -75,6 +75,9 @@ public sealed class Il2CppOffsetParityComparerTests
 
         result.Symbols["jgc_type13"] = 28;
         result.Symbols["inv_klass_ti"] = 30;
+        result.Symbols["uo_max"] = 31;
+        result.Symbols["uo_cur"] = 32;
+        result.Symbols["uo_wave"] = 33;
         return result;
     }
 
@@ -101,6 +104,9 @@ public sealed class Il2CppOffsetParityComparerTests
   "uo_ti":19,
   "uo_dict":20,
   "uo_cur_cache":21,
+  "uo_max":31,
+  "uo_cur":32,
+  "uo_wave":33,
   "bal_ti":22,
   "stage_off":23,
   "jgk":24,
