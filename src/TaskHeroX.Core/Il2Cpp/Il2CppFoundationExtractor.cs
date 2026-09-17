@@ -2,8 +2,8 @@ namespace TaskHeroX.Core.Il2Cpp;
 
 /// <summary>
 /// Compõe os grupos já portados em um único resultado intermediário. A aceitação final continua sob
-/// responsabilidade de <see cref="Il2CppOffsetCache.TryValidate"/>; neste estágio falta o anchor
-/// disassembly-backed de <c>iuw</c> e outros símbolos opcionais/runtime.
+/// responsabilidade de <see cref="Il2CppOffsetCache.TryValidate"/>; símbolos opcionais/runtime ainda
+/// podem ser acrescentados sem enfraquecer o contrato crítico.
 /// </summary>
 public static class Il2CppFoundationExtractor
 {
@@ -75,6 +75,15 @@ public static class Il2CppFoundationExtractor
         foreach ((string key, long value) in critical.Symbols)
             result.Symbols[key] = value;
         result.RaClass = critical.MoveManagerClass;
+
+        if (!Il2CppLlxFlowExtractor.TryExtractBoxCounter(
+                image, result.Symbols["llx"], out long iuw))
+        {
+            offsets = null;
+            error = "iuw flow anchor missing from llx";
+            return false;
+        }
+        result.Symbols["iuw"] = iuw;
 
         if (!Il2CppMethodAnchorExtractor.TryExtractItemInfoGetter(classes, out long izb))
         {
