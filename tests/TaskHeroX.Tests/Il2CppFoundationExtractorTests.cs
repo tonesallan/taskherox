@@ -138,6 +138,7 @@ public static class uw.Cube
             [0x1300] = [0xC3],
             [0x1400] = [0x83, 0xF8, 0x01, 0x83, 0xF8, 0x03, 0xC3],
             [0x1500] = [0x83, 0xF8, 0x02, 0xC3],
+            [0x1900] = BuildLlx(0x1900, 0x2500),
         };
 
         bool ok = Il2CppFoundationExtractor.TryExtract(
@@ -176,6 +177,7 @@ public static class uw.Cube
         Assert.Equal(0x2000L, offsets.Symbols["ioa"]);
         Assert.Equal(0x2100L, offsets.Symbols["ipu"]);
         Assert.Equal(0x2300L, offsets.Symbols["imx"]);
+        Assert.Equal(0x2500L, offsets.Symbols["iuw"]);
         Assert.Equal(0x1100L, offsets.Symbols["jgk"]);
         Assert.Equal(0x1200L, offsets.Symbols["jgq"]);
         Assert.Equal(0x1300L, offsets.Symbols["jgd"]);
@@ -184,9 +186,7 @@ public static class uw.Cube
         Assert.Equal(0x10L, offsets.Symbols["psd_common_off"]);
         Assert.Equal(0x64L, offsets.Symbols["commonsave_curstage"]);
 
-        // Após os anchors textuais críticos, resta iuw antes de o contrato completo aceitar o cache.
-        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? validationError));
-        Assert.Equal("missing critical symbol: iuw", validationError);
+        Assert.True(Il2CppOffsetCache.TryValidate(offsets, out string? validationError), validationError);
     }
 
     private static byte[] BuildCalls(long startRva, params long[] targets)
@@ -201,6 +201,16 @@ public static class uw.Cube
             ip += 5;
         }
         bytes.Add(0xC3);
+        return [.. bytes];
+    }
+
+    private static byte[] BuildLlx(long startRva, long iuwTarget)
+    {
+        var bytes = new List<byte>();
+        bytes.Add(0xE8);
+        int relative = checked((int)(iuwTarget - (startRva + 5)));
+        bytes.AddRange(BitConverter.GetBytes(relative));
+        bytes.AddRange([0x85, 0xC0, 0x7E, 0x00, 0xC3]);
         return [.. bytes];
     }
 
