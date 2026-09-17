@@ -92,7 +92,7 @@ public class InputManager
 
         Assert.False(ok);
         Assert.Null(anchors);
-        Assert.Equal("InputManager.Update anchor ambiguous", error);
+        Assert.Equal("InputManager.Update anchor ambiguous (2): InputManager@0x1000, InputManager@0x1010", error);
     }
 
     [Fact]
