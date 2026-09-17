@@ -11,7 +11,7 @@ public sealed record Il2CppDumpField(string Type, string Name, long Offset, bool
 /// <summary>
 /// Método extraído de um <c>dump.cs</c>. O RVA vem do comentário imediatamente anterior ao método.
 /// </summary>
-public sealed record Il2CppDumpMethod(long Rva, string Signature);
+public sealed record Il2CppDumpMethod(long Rva, string Signature, string Visibility);
 
 /// <summary>
 /// Representação mínima de uma classe do <c>dump.cs</c>, equivalente ao subconjunto usado pelo
@@ -59,7 +59,7 @@ public static class Il2CppDumpParser
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex MethodRegex = new(
-        @"^\s*(?:\[[^\]]*\]\s*)?(?:public|private|internal|protected)\s+(.*?\S)\s*\{\s*\}\s*$",
+        @"^\s*(?:\[[^\]]*\]\s*)?(public|private|internal|protected)\s+(.*?\S)\s*\{\s*\}\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex StaticFieldRegex = new(
@@ -134,7 +134,10 @@ public static class Il2CppDumpParser
             Match methodMatch = MethodRegex.Match(line);
             if (methodMatch.Success && pendingRva is long methodRva)
             {
-                current.AddMethod(new Il2CppDumpMethod(methodRva, methodMatch.Groups[1].Value));
+                current.AddMethod(new Il2CppDumpMethod(
+                    methodRva,
+                    methodMatch.Groups[2].Value,
+                    methodMatch.Groups[1].Value));
                 pendingRva = null;
             }
         }
