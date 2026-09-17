@@ -3,10 +3,10 @@
 > Fonte da verdade da **função** (não do visual atual). Uma IA/pessoa deve conseguir
 > **redesenhar** esta tela sem adivinhar comportamento.
 >
-> Código-fonte: `src/TbhBot.App/Views/RunesView.cs`
-> Tema: `src/TbhBot.App/Theme/Dark.xaml`
-> Backend: `src/TbhBot.Core/Game/RuneDefs.cs`, `RuneLevels.cs`, `SaveData.cs` (métodos `ReadRunes`/`SetRune`)
-> Serviço: `src/TbhBot.App/Services/EngineService.cs`
+> Código-fonte: `src/TaskHeroX.App/Views/RunesView.cs`
+> Tema: `src/TaskHeroX.App/Theme/Dark.xaml`
+> Backend: `src/TaskHeroX.Core/Game/RuneDefs.cs`, `RuneLevels.cs`, `SaveData.cs` (métodos `ReadRunes`/`SetRune`)
+> Serviço: `src/TaskHeroX.App/Services/EngineService.cs`
 
 ---
 

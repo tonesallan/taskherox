@@ -8,16 +8,16 @@
 Painel (trainer) do jogo **TaskbarHero** (Steam appid `3678970`, jogo Unity IL2CPP, offline com validação
 no backend TheBackend). O painel lê/escreve a memória do jogo para: forçar stats, desbloquear cubo/runas/
 estágios, automatizar caixas/baú/fusão/boss/evolução, mostrar inventário/preços, e reabrir o jogo sozinho
-se cair (auto-restart). É um **WPF em C#/.NET 10**, entregue como **1 .exe self-contained** (`dist/TbhBot.App.exe`).
+se cair (auto-restart). É um **WPF em C#/.NET 10**, entregue como **1 .exe self-contained** (`dist/TaskHeroX.exe`).
 
-## Projetos (solução `TbhBot.slnx`)
+## Projetos (solução `TaskHeroX.slnx`)
 | Projeto | O que é | UI? |
 |---|---|---|
-| `TbhBot.Core` | Motor: attach ao processo, resolução de offsets, cheats, leitura/escrita de save, automações, dispatcher main-thread. | Não |
-| `TbhBot.App` | Painel WPF (o que o usuário vê). Depende do Core. | Sim (WPF) |
-| `TbhBot.Cli` | Testes de linha de comando (`--e2e`, `--features`, etc). Só p/ dev. | Não |
+| `TaskHeroX.Core` | Motor: attach ao processo, resolução de offsets, cheats, leitura/escrita de save, automações, dispatcher main-thread. | Não |
+| `TaskHeroX.App` | Painel WPF (o que o usuário vê). Depende do Core. | Sim (WPF) |
+| `TaskHeroX.Cli` | Testes de linha de comando (`--e2e`, `--features`, etc). Só p/ dev. | Não |
 
-## Estrutura da UI (`src/TbhBot.App`)
+## Estrutura da UI (`src/TaskHeroX.App`)
 ```
 MainWindow.xaml(.cs)      janela host: cabeçalho + TabControl (5 abas) + barra de status
 Views/
