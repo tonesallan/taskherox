@@ -95,6 +95,8 @@ public static class Il2CppStageRuntimeFieldExtractor
                 .GroupBy(method => method.Rva)
                 .ToDictionary(group => group.Key, group => group.First().Signature);
 
+            var currentCacheCandidate = new HashSet<long> { currentCacheOffset };
+
             long[] helpers = Il2CppDisassembly.DirectFlows(
                     image, script.Addresses, stageHub.Jgk)
                 .Select(flow => flow.TargetRva)
@@ -111,7 +113,7 @@ public static class Il2CppStageRuntimeFieldExtractor
 
                 int[] cacheWrites = instructions
                     .Select((instruction, index) => (instruction, index))
-                    .Where(pair => WrittenCandidateOffsets(pair.instruction, [currentCacheOffset])
+                    .Where(pair => WrittenCandidateOffsets(pair.instruction, currentCacheCandidate)
                         .Contains(currentCacheOffset))
                     .Select(pair => pair.index)
                     .ToArray();
