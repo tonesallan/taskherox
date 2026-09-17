@@ -314,8 +314,8 @@ public class SaveRootB
 public class SaveRoot
 {
     public List<InventorySaveData> first; // 0x88
-    public List<InventorySaveData> duplicate; // 0x90
-    public List<StashSaveData> stash; // 0x98
+    public List<InventorySaveData> duplicate; // 0x98
+    public List<StashSaveData> stash; // 0xB0
 }
 """;
 
