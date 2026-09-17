@@ -48,7 +48,7 @@ TbhBot.slnx                  current solution name; scheduled for staged rename
 Directory.Build.props        shared build metadata
 src/
   TaskHeroX.Core/               process, memory, IL2CPP, game features and automation
-  TbhBot.App/                WPF desktop application
+  TaskHeroX.App/                WPF desktop application
 tools/TbhBot.Cli/            diagnostics, E2E harness and benchmarks
 tests/TbhBot.Tests/          automated tests
 offsets/                     public build-offset feed
@@ -66,7 +66,7 @@ Requires the **.NET 10 SDK** on Windows x64.
 ```powershell
 dotnet build
 dotnet test
-dotnet run --project src\TbhBot.App
+dotnet run --project src\TaskHeroX.App
 dotnet run --project tools\TbhBot.Cli -- --e2e --offsets "src\TaskHeroX.Core\Offsets"
 ```
 

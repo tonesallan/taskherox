@@ -4,10 +4,10 @@
 > deve preservar todo o comportamento descrito aqui, mesmo que troque completamente a aparência.
 >
 > Código-fonte real:
-> - View: `src/TbhBot.App/Views/InventoryView.cs`
+> - View: `src/TaskHeroX.App/Views/InventoryView.cs`
 > - Motor: `src/TaskHeroX.Core/Game/Inventory.cs`
-> - Tema: `src/TbhBot.App/Theme/Dark.xaml`
-> - Serviço: `src/TbhBot.App/Services/EngineService.cs`
+> - Tema: `src/TaskHeroX.App/Theme/Dark.xaml`
+> - Serviço: `src/TaskHeroX.App/Services/EngineService.cs`
 
 ---
 

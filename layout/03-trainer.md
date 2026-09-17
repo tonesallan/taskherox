@@ -3,9 +3,9 @@
 > Fonte da verdade da **função** (não do visual atual). Uma IA/pessoa vai redesenhar o layout usando este
 > documento; nenhum comportamento pode ser adivinhado.
 >
-> Código-fonte: `src/TbhBot.App/Views/TrainerView.cs` (view inteira, construída em C# code-behind, sem XAML
-> por-tela). Tema: `src/TbhBot.App/Theme/Dark.xaml`. Backend: `src/TaskHeroX.Core/` (Engine + Game/*).
-> Persistência de profiles: `src/TbhBot.App/Services/ProfileStore.cs`.
+> Código-fonte: `src/TaskHeroX.App/Views/TrainerView.cs` (view inteira, construída em C# code-behind, sem XAML
+> por-tela). Tema: `src/TaskHeroX.App/Theme/Dark.xaml`. Backend: `src/TaskHeroX.Core/` (Engine + Game/*).
+> Persistência de profiles: `src/TaskHeroX.App/Services/ProfileStore.cs`.
 
 ---
 

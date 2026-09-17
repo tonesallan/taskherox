@@ -3,9 +3,9 @@
 > Fonte da verdade **da FUNÇÃO** (não do visual atual). Uma IA/pessoa deve conseguir
 > redesenhar o layout sem adivinhar comportamento.
 >
-> Arquivo de código: `src/TbhBot.App/Views/StagesView.cs` (classe `StagesView : UserControl`).
+> Arquivo de código: `src/TaskHeroX.App/Views/StagesView.cs` (classe `StagesView : UserControl`).
 > Backend: `src/TaskHeroX.Core/Game/SaveData.cs` (`StageProgress`, `SetMaxStage`).
-> Tema: `src/TbhBot.App/Theme/Dark.xaml`. Serviço: `src/TbhBot.App/Services/EngineService.cs`.
+> Tema: `src/TaskHeroX.App/Theme/Dark.xaml`. Serviço: `src/TaskHeroX.App/Services/EngineService.cs`.
 
 ---
 

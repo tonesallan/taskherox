@@ -3,8 +3,8 @@
 > Fonte da verdade da **função** desta aba (não do visual atual). Quem redesenha pode mudar cores,
 > disposição e componentes, mas tem que preservar 100% do comportamento descrito aqui.
 >
-> Código-fonte: `src/TbhBot.App/Views/MarketView.cs` (a tela) · `src/TaskHeroX.Core/Market/MarketDb.cs`
-> (preço Steam) · `src/TbhBot.App/Services/OverlayService.cs` + `OverlayWindow.cs` (overlay) ·
+> Código-fonte: `src/TaskHeroX.App/Views/MarketView.cs` (a tela) · `src/TaskHeroX.Core/Market/MarketDb.cs`
+> (preço Steam) · `src/TaskHeroX.App/Services/OverlayService.cs` + `OverlayWindow.cs` (overlay) ·
 > `src/TaskHeroX.Core/Market/PriceIndex.cs` (índice de preços do overlay). Estilos em `Theme/Dark.xaml`.
 
 ---

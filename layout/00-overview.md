@@ -14,10 +14,10 @@ se cair (auto-restart). É um **WPF em C#/.NET 10**, entregue como **1 .exe self
 | Projeto | O que é | UI? |
 |---|---|---|
 | `TaskHeroX.Core` | Motor: attach ao processo, resolução de offsets, cheats, leitura/escrita de save, automações, dispatcher main-thread. | Não |
-| `TbhBot.App` | Painel WPF (o que o usuário vê). Depende do Core. | Sim (WPF) |
+| `TaskHeroX.App` | Painel WPF (o que o usuário vê). Depende do Core. | Sim (WPF) |
 | `TbhBot.Cli` | Testes de linha de comando (`--e2e`, `--features`, etc). Só p/ dev. | Não |
 
-## Estrutura da UI (`src/TbhBot.App`)
+## Estrutura da UI (`src/TaskHeroX.App`)
 ```
 MainWindow.xaml(.cs)      janela host: cabeçalho + TabControl (5 abas) + barra de status
 Views/

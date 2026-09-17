@@ -4,12 +4,12 @@
 > lendo só este doc, sem adivinhar comportamento.
 >
 > Código real:
-> - `src/TbhBot.App/Services/OverlayService.cs` — o motor (timer, captura, OCR, casamento, badge).
-> - `src/TbhBot.App/Services/OverlayWindow.cs` — a janela topmost transparente click-through.
-> - `src/TbhBot.App/Services/Native.cs` — P/Invoke (cursor, enum de janelas, captura GDI).
+> - `src/TaskHeroX.App/Services/OverlayService.cs` — o motor (timer, captura, OCR, casamento, badge).
+> - `src/TaskHeroX.App/Services/OverlayWindow.cs` — a janela topmost transparente click-through.
+> - `src/TaskHeroX.App/Services/Native.cs` — P/Invoke (cursor, enum de janelas, captura GDI).
 > - `src/TaskHeroX.Core/Market/PriceIndex.cs` — índice de preços embutido (base→grade→USD).
-> - `src/TbhBot.App/Views/MarketView.cs` — **onde vive o toggle** (aba "Market").
-> - `src/TbhBot.App/Theme/Dark.xaml` — tema (brushes/estilos do painel; o badge NÃO usa o tema).
+> - `src/TaskHeroX.App/Views/MarketView.cs` — **onde vive o toggle** (aba "Market").
+> - `src/TaskHeroX.App/Theme/Dark.xaml` — tema (brushes/estilos do painel; o badge NÃO usa o tema).
 
 ---
 

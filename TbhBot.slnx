@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/TbhBot.App/TbhBot.App.csproj" />
+    <Project Path="src/TaskHeroX.App/TaskHeroX.App.csproj" />
     <Project Path="src/TaskHeroX.Core/TaskHeroX.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
