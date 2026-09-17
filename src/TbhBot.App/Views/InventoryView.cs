@@ -7,10 +7,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 using TaskHeroX.Core.Game;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Aba Inventário = LISTA. Porta o inv_tree do tbh_panel.py: lê Inventory.List() (nome/grade/qtd/preço via

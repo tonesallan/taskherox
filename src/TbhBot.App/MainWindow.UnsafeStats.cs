@@ -1,7 +1,7 @@
 using System.Windows;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 
-namespace TbhBot.App;
+namespace TaskHeroX.App;
 
 public partial class MainWindow
 {

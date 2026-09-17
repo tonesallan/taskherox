@@ -6,7 +6,7 @@ using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Security.Cryptography;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>
 /// OVERLAY de preço (porta do tbh_overlay.py, agora NATIVO em C# — sem processo Python separado). Passe o

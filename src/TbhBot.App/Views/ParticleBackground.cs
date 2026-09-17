@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Fundo animado "cyber network" (porte do &lt;canvas&gt; do web-preview): ~80 partículas flutuando, com

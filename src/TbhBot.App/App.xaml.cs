@@ -1,8 +1,8 @@
-﻿using System.Configuration;
+using System.Configuration;
 using System.Data;
 using System.Windows;
 
-namespace TbhBot.App;
+namespace TaskHeroX.App;
 
 /// <summary>
 /// Interaction logic for App.xaml

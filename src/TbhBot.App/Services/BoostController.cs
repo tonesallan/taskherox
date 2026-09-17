@@ -1,6 +1,6 @@
 using TaskHeroX.Core.Game;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>
 /// Controlador persistente dos multiplicadores do Boost Lab.

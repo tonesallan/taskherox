@@ -3,9 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Boost Lab: multiplicadores relativos ao valor real capturado na sessão.

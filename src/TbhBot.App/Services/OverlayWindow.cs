@@ -4,7 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>
 /// Janela do overlay: cobre a tela virtual inteira, topmost, transparente e CLICK-THROUGH (não rouba clique/

@@ -4,10 +4,10 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 using TaskHeroX.Core.Il2Cpp;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Aba Trainer (Control Center) no visual Neo-Dashboard: glass cards, cyber toggles (título+descrição),

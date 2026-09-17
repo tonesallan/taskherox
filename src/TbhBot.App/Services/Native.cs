@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>P/Invoke pro overlay: cursor, enumeração de janelas e captura de tela via GDI (StretchBlt + GetDIBits).</summary>
 internal static class Native

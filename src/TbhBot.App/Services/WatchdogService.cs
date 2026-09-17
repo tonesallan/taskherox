@@ -5,7 +5,7 @@ using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Security.Cryptography;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>
 /// AUTO-RESTART — porte FIEL do _watchdog_loop (tbh_core.py:997). Quando o jogo FECHA por completo:

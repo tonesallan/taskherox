@@ -1,9 +1,9 @@
 using System.Windows;
-using TbhBot.App.Views;
+using TaskHeroX.App.Views;
 using TaskHeroX.Core;
 using TaskHeroX.Core.Automation;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>
 /// Dono do <see cref="Engine"/> para a UI. Attacha/reataca ao jogo em background (equivalente ao watchdog

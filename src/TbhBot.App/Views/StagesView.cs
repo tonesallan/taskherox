@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Mapa dos 120 estagios (4 dificuldades x 3 atos x 10 estagios). StageKey = (dif+1)*1000 + act*100 + est.

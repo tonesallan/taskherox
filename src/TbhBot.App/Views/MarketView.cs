@@ -2,10 +2,10 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 using TaskHeroX.Core.Market;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Aba Mercado: busca o preco de um item no Steam Community Market.

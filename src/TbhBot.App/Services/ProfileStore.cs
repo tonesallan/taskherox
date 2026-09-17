@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>Um perfil salvo do usuário: switches (proteção/automação), filtros do fuse e stats/campos forçados.</summary>
 public sealed class Profile

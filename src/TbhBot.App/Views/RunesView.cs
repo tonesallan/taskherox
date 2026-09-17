@@ -11,10 +11,10 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 using TaskHeroX.Core.Game;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Aba de runas = ÁRVORE navegável. Canvas com ZOOM (roda do mouse) + PAN (arrastar com o botão esquerdo);

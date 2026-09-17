@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace TbhBot.App.Services;
+namespace TaskHeroX.App.Services;
 
 /// <summary>
 /// Guardrails operacionais do editor de stats do TaskHeroX.

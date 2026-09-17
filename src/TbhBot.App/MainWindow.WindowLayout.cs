@@ -1,10 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using TbhBot.App.Services;
-using TbhBot.App.Views;
+using TaskHeroX.App.Services;
+using TaskHeroX.App.Views;
 
-namespace TbhBot.App;
+namespace TaskHeroX.App;
 
 /// <summary>
 /// Tamanho inicial compacto + controles completos do chrome customizado.

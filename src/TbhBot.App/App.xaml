@@ -1,7 +1,7 @@
-<Application x:Class="TbhBot.App.App"
+<Application x:Class="TaskHeroX.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:TbhBot.App"
+             xmlns:local="clr-namespace:TaskHeroX.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>

@@ -4,10 +4,10 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 using TaskHeroX.Core.Diagnostics;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Compatibility Center: diagnóstico somente-leitura do build atual.

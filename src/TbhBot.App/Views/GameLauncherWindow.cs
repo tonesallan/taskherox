@@ -2,9 +2,9 @@ using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using TbhBot.App.Services;
+using TaskHeroX.App.Services;
 
-namespace TbhBot.App.Views;
+namespace TaskHeroX.App.Views;
 
 /// <summary>
 /// Janela de localização/inicialização do jogo inspirada no fluxo do WeMod:
