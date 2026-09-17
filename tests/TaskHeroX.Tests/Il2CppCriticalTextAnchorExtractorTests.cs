@@ -12,6 +12,8 @@ public class InputManager
 {
     // RVA: 0x1000
     private void Update() { }
+    // RVA: 0x1010
+    public void Update() { }
 }
 
 public class StageBox
@@ -80,8 +82,12 @@ public class InputManager
 {
     // RVA: 0x1000
     private void Update() { }
+}
+
+public class InputManager
+{
     // RVA: 0x1010
-    public void Update() { }
+    private void Update() { }
 }
 """;
 
