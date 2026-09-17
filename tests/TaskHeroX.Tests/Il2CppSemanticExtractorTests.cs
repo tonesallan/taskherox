@@ -215,4 +215,163 @@ public class StashRoot
         Assert.Null(offsets);
         Assert.Equal("inventory and stash fields belong to different classes", error);
     }
+
+    [Fact]
+    public void TryExtractInventoryRootSymbols_ResolvesConcreteAndGenericTypeInfo()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<ItemSaveData> itemSaveDatas; // 0xB0
+}
+
+public class bao : nr<bao>
+{
+    private PlayerSaveData data; // 0x28
+}
+""";
+
+        const string script = """
+{
+  "ScriptMetadata": [
+    { "Name": "bao_TypeInfo", "Address": "0x5100" },
+    { "Name": "nr<bao>_TypeInfo", "Address": "0x5200" }
+  ]
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventoryRootSymbols(
+            Il2CppDumpParser.Parse(dump),
+            Il2CppScriptIndex.Parse(script),
+            out InventoryRootSymbols? symbols,
+            out string? error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(symbols);
+        Assert.Equal("bao", symbols.InventoryClass);
+        Assert.Equal(0x28L, symbols.PlayerSaveDataOffset);
+        Assert.Equal(0xB0L, symbols.ItemSaveDataListOffset);
+        Assert.Equal(0x5100L, symbols.InventoryClassTypeInfo);
+        Assert.Equal(0x5200L, symbols.GenericSingletonTypeInfo);
+    }
+
+    [Fact]
+    public void TryExtractInventoryRootSymbols_AcceptsConcreteTypeInfoOnly()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<Game.Save.ItemSaveData> items; // 0xA8
+}
+public class box : baseSingleton<box>
+{
+    private Game.Save.PlayerSaveData save; // 0x30
+}
+""";
+
+        const string script = """
+{
+  "ScriptMetadata": [
+    { "Name": "box_TypeInfo", "Address": 7000 }
+  ]
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventoryRootSymbols(
+            Il2CppDumpParser.Parse(dump),
+            Il2CppScriptIndex.Parse(script),
+            out InventoryRootSymbols? symbols,
+            out string? error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(symbols);
+        Assert.Equal(0x30L, symbols.PlayerSaveDataOffset);
+        Assert.Equal(0xA8L, symbols.ItemSaveDataListOffset);
+        Assert.Equal(7000L, symbols.InventoryClassTypeInfo);
+        Assert.Null(symbols.GenericSingletonTypeInfo);
+    }
+
+    [Fact]
+    public void TryExtractInventoryRootSymbols_RejectsNonSingletonOwner()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<ItemSaveData> items; // 0xA8
+}
+public class box
+{
+    private PlayerSaveData save; // 0x28
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventoryRootSymbols(
+            Il2CppDumpParser.Parse(dump),
+            Il2CppScriptIndex.Parse("{}"),
+            out InventoryRootSymbols? symbols,
+            out string? error);
+
+        Assert.False(ok);
+        Assert.Null(symbols);
+        Assert.Equal("inventory owner box is not a self-generic singleton", error);
+    }
+
+    [Fact]
+    public void TryExtractInventoryRootSymbols_RejectsAmbiguousGenericTypeInfo()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<ItemSaveData> items; // 0xA8
+}
+public class box : root<box>
+{
+    private PlayerSaveData save; // 0x28
+}
+""";
+
+        const string script = """
+{
+  "ScriptMetadata": [
+    { "Name": "first<box>_TypeInfo", "Address": 1 },
+    { "Name": "second<box>_TypeInfo", "Address": 2 }
+  ]
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventoryRootSymbols(
+            Il2CppDumpParser.Parse(dump),
+            Il2CppScriptIndex.Parse(script),
+            out InventoryRootSymbols? symbols,
+            out string? error);
+
+        Assert.False(ok);
+        Assert.Null(symbols);
+        Assert.Equal("generic inventory TypeInfo ambiguous (2)", error);
+    }
+
+    [Fact]
+    public void TryExtractInventoryRootSymbols_RejectsMissingTypeInfo()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<ItemSaveData> items; // 0xA8
+}
+public class box : root<box>
+{
+    private PlayerSaveData save; // 0x28
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventoryRootSymbols(
+            Il2CppDumpParser.Parse(dump),
+            Il2CppScriptIndex.Parse("{}"),
+            out InventoryRootSymbols? symbols,
+            out string? error);
+
+        Assert.False(ok);
+        Assert.Null(symbols);
+        Assert.Equal("inventory TypeInfo missing", error);
+    }
 }
