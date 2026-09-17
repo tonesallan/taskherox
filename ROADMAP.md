@@ -18,7 +18,7 @@ Legenda: 🟢 feito · 🟡 em andamento · ⚪ pendente
 
 ## Fase 0 — Fundação 🟢
 **Meta:** solução compilando + rodando, sem lógica de jogo.
-- Solução `TbhBot` (Core lib + App WPF + Cli de teste), `Directory.Build.props` (x64/nullable/unsafe), gitignore/editorconfig.
+- Solução `TaskHeroX` (Core lib + App WPF + Cli de teste), `Directory.Build.props` (x64/nullable/unsafe), gitignore/editorconfig.
 - Camada de memória mínima: `ProcessTarget` (attach) + `MemoryAccess` (Read/Write/**ReadArray**).
 - CLI de benchmark (sequencial vs batch).
 - **Pronto quando:** `dotnet run --project tools/TaskHeroX.Cli` attacha no jogo e imprime o speedup do batch.

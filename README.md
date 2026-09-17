@@ -44,7 +44,7 @@ The migration is intentionally recoverable:
 ## Structure
 
 ```text
-TbhBot.slnx                  current solution name; scheduled for staged rename
+TaskHeroX.slnx                  current solution name; scheduled for staged rename
 Directory.Build.props        shared build metadata
 src/
   TaskHeroX.Core/               process, memory, IL2CPP, game features and automation

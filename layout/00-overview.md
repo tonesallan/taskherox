@@ -10,7 +10,7 @@ no backend TheBackend). O painel lê/escreve a memória do jogo para: forçar st
 estágios, automatizar caixas/baú/fusão/boss/evolução, mostrar inventário/preços, e reabrir o jogo sozinho
 se cair (auto-restart). É um **WPF em C#/.NET 10**, entregue como **1 .exe self-contained** (`dist/TaskHeroX.exe`).
 
-## Projetos (solução `TbhBot.slnx`)
+## Projetos (solução `TaskHeroX.slnx`)
 | Projeto | O que é | UI? |
 |---|---|---|
 | `TaskHeroX.Core` | Motor: attach ao processo, resolução de offsets, cheats, leitura/escrita de save, automações, dispatcher main-thread. | Não |
