@@ -393,6 +393,86 @@ public class bao : nr<bao>
     }
 
     [Fact]
+    public void TryExtractInventoryRootSymbols_IgnoresItemSaveListsOutsidePlayerSaveData()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<ItemSaveData> itemSaveDatas; // 0xB8
+}
+
+public class SnapshotSaveData
+{
+    public List<ItemSaveData> snapshotItems; // 0x40
+}
+
+public class RewardCache
+{
+    public List<ItemSaveData> cachedItems; // 0x58
+}
+
+public class bck : root<bck>
+{
+    private PlayerSaveData data; // 0x28
+}
+""";
+
+        const string script = """
+{
+  "ScriptMetadata": [
+    { "Name": "bck_TypeInfo", "Address": "0x5100" },
+    { "Name": "root<bck>_TypeInfo", "Address": "0x5200" }
+  ]
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventoryRootSymbols(
+            Il2CppDumpParser.Parse(dump),
+            Il2CppScriptIndex.Parse(script),
+            out InventoryRootSymbols? symbols,
+            out string? error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(symbols);
+        Assert.Equal(0xB8L, symbols.ItemSaveDataListOffset);
+    }
+
+    [Fact]
+    public void TryExtractInventoryRootSymbols_RejectsMultipleItemListsInsidePlayerSaveData()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<ItemSaveData> items; // 0xB0
+    public List<ItemSaveData> duplicate; // 0xB8
+}
+
+public class bck : root<bck>
+{
+    private PlayerSaveData data; // 0x28
+}
+""";
+
+        const string script = """
+{
+  "ScriptMetadata": [
+    { "Name": "bck_TypeInfo", "Address": "0x5100" }
+  ]
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventoryRootSymbols(
+            Il2CppDumpParser.Parse(dump),
+            Il2CppScriptIndex.Parse(script),
+            out InventoryRootSymbols? symbols,
+            out string? error);
+
+        Assert.False(ok);
+        Assert.Null(symbols);
+        Assert.Equal("PlayerSaveData ItemSaveData list ambiguous (2)", error);
+    }
+
+    [Fact]
     public void TryExtractInventoryRootSymbols_AcceptsConcreteTypeInfoOnly()
     {
         const string dump = """
