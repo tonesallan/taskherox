@@ -228,6 +228,59 @@ public class PlayerSaveData
     }
 
     [Fact]
+    public void TryExtractInventorySlotOffsets_ResolvesUniqueAdjacentStashInPlayerSaveData()
+    {
+        const string dump = """
+public class SnapshotSaveData
+{
+    public List<InventorySaveData> inventory; // 0x40
+    public List<StashSaveData> stash; // 0x48
+}
+
+public class PlayerSaveData
+{
+    public List<InventorySaveData> inventory; // 0x98
+    public List<StashSaveData> stash; // 0xA0
+    public List<StashSaveData> stashHistory; // 0xD0
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventorySlotOffsets(
+            Il2CppDumpParser.Parse(dump),
+            out InventorySlotOffsets? offsets,
+            out string? error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(offsets);
+        Assert.Equal(0x98L, offsets.InventorySlotsOffset);
+        Assert.Equal(0xA0L, offsets.StashSlotsOffset);
+        Assert.Equal("PlayerSaveData", offsets.DeclaringClass);
+    }
+
+    [Fact]
+    public void TryExtractInventorySlotOffsets_RejectsWhenAdjacentPairIsStillAmbiguous()
+    {
+        const string dump = """
+public class PlayerSaveData
+{
+    public List<InventorySaveData> inventoryA; // 0x88
+    public List<StashSaveData> stashA; // 0x90
+    public List<InventorySaveData> inventoryB; // 0x98
+    public List<StashSaveData> stashB; // 0xA0
+}
+""";
+
+        bool ok = Il2CppSemanticExtractor.TryExtractInventorySlotOffsets(
+            Il2CppDumpParser.Parse(dump),
+            out InventorySlotOffsets? offsets,
+            out string? error);
+
+        Assert.False(ok);
+        Assert.Null(offsets);
+        Assert.Equal("inventory slot field ambiguous (2)", error);
+    }
+
+    [Fact]
     public void TryExtractInventorySlotOffsets_RejectsMultiplePairedOwners()
     {
         const string dump = """
