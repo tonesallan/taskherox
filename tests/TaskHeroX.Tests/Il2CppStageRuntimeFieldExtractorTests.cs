@@ -136,6 +136,65 @@ public class StageNode
         Assert.Equal("uo_max ambiguous: obscured=5 hits=2", error);
     }
 
+    [Fact]
+    public void TryExtract_AcceptsHistoricalThreeFieldFallback()
+    {
+        const string dump = """
+public static class Uo
+{
+    public static List<StageCache> list; // 0x10
+    public static Dictionary<int, StageCache> dict; // 0x18
+    public static ObscuredInt max; // 0x50
+    public static ObscuredInt current; // 0x60
+    public static ObscuredInt wave; // 0x70
+
+    // RVA: 0x1100
+    public static void enter(int key) { }
+    // RVA: 0x1200
+    public static bool unlocked(int key) { }
+    // RVA: 0x1300
+    public static void boss(StageCache cache, Action<bool> callback) { }
+    // RVA: 0x1400
+    public static EStageEnterResultType validate(StageCache cache) { }
+}
+public class StageNode
+{
+    // RVA: 0x1000
+    public void Click() { }
+}
+""";
+
+        Il2CppScriptIndex script = Il2CppScriptIndex.Parse("""
+{ "Addresses": [4096,4352,4608,4864,5120] }
+""");
+
+        var functions = new Dictionary<long, byte[]>
+        {
+            [0x1000] = BuildCalls(0x1000, 0x1100, 0x1200, 0x1300, 0x1400),
+            [0x1100] = [0xC3],
+            [0x1200] = [0x3D,0x4D,0x04,0x00,0x00, 0xC3],
+            [0x1300] = [0xC3],
+            [0x1400] = [0x83,0xF8,0x01, 0x83,0xF8,0x03, 0xC3],
+        };
+
+        IReadOnlyList<Il2CppDumpClass> classes = Il2CppDumpParser.Parse(dump);
+        Il2CppPeImage image = new(BuildPe(functions));
+
+        Assert.True(Il2CppSemanticExtractor.TryExtractStageStaticSymbols(
+            classes, script, out StageStaticSymbols? stageStatic, out string? staticError), staticError);
+        Assert.True(Il2CppStageHubExtractor.TryExtract(
+            classes, script, image, out StageHubSymbols? hub, out string? hubError), hubError);
+
+        bool ok = Il2CppStageRuntimeFieldExtractor.TryExtract(
+            classes, script, image, stageStatic!, hub!, out StageRuntimeFieldSymbols? fields, out string? error);
+
+        Assert.True(ok, error);
+        Assert.NotNull(fields);
+        Assert.Equal(0x50L, fields.UoMaxOffset);
+        Assert.Equal(0x60L, fields.UoCurrentOffset);
+        Assert.Equal(0x70L, fields.UoWaveOffset);
+    }
+
     private static byte[] BuildCalls(long startRva, params long[] targets)
     {
         var bytes = new List<byte>();
