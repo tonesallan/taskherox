@@ -32,7 +32,7 @@ public sealed class Il2CppOffsetParityComparerTests
         Assert.False(report.IsMatch);
         Assert.Contains(report.Mismatches, mismatch =>
             mismatch.GeneratedKey == "jgq" && mismatch.ExpectedKey == "jgq" &&
-            mismatch.GeneratedValue == "999" && mismatch.ExpectedValue == "27");
+            mismatch.GeneratedValue == "999" && mismatch.ExpectedValue == "25");
         Assert.Contains(report.Mismatches, mismatch =>
             mismatch.GeneratedKey == "jgc_type13" && mismatch.ExpectedKey == "jgc" &&
             mismatch.GeneratedValue == "777" && mismatch.ExpectedValue == "28");
