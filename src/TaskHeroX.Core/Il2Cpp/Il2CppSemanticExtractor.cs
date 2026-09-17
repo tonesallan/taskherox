@@ -142,6 +142,20 @@ public static class Il2CppSemanticExtractor
         {
             var owner = pairedOwners[0];
 
+            if (TryResolveAdjacentInventoryStashPair(
+                    owner.Inventory,
+                    owner.Stash,
+                    out Il2CppDumpField? inventoryField,
+                    out Il2CppDumpField? stashField))
+            {
+                offsets = new InventorySlotOffsets(
+                    inventoryField!.Offset,
+                    stashField!.Offset,
+                    owner.Class.Name);
+                error = null;
+                return true;
+            }
+
             if (owner.Inventory.Length != 1)
             {
                 offsets = null;
@@ -149,19 +163,9 @@ public static class Il2CppSemanticExtractor
                 return false;
             }
 
-            if (owner.Stash.Length != 1)
-            {
-                offsets = null;
-                error = $"stash slot field ambiguous ({owner.Stash.Length})";
-                return false;
-            }
-
-            offsets = new InventorySlotOffsets(
-                owner.Inventory[0].Offset,
-                owner.Stash[0].Offset,
-                owner.Class.Name);
-            error = null;
-            return true;
+            offsets = null;
+            error = $"stash slot field ambiguous ({owner.Stash.Length})";
+            return false;
         }
 
         if (pairedOwners.Length > 1)
@@ -177,6 +181,20 @@ public static class Il2CppSemanticExtractor
             {
                 var owner = playerSaveOwners[0];
 
+                if (TryResolveAdjacentInventoryStashPair(
+                        owner.Inventory,
+                        owner.Stash,
+                        out Il2CppDumpField? inventoryField,
+                        out Il2CppDumpField? stashField))
+                {
+                    offsets = new InventorySlotOffsets(
+                        inventoryField!.Offset,
+                        stashField!.Offset,
+                        owner.Class.Name);
+                    error = null;
+                    return true;
+                }
+
                 if (owner.Inventory.Length != 1)
                 {
                     offsets = null;
@@ -184,19 +202,9 @@ public static class Il2CppSemanticExtractor
                     return false;
                 }
 
-                if (owner.Stash.Length != 1)
-                {
-                    offsets = null;
-                    error = $"stash slot field ambiguous ({owner.Stash.Length}) in PlayerSaveData";
-                    return false;
-                }
-
-                offsets = new InventorySlotOffsets(
-                    owner.Inventory[0].Offset,
-                    owner.Stash[0].Offset,
-                    owner.Class.Name);
-                error = null;
-                return true;
+                offsets = null;
+                error = $"stash slot field ambiguous ({owner.Stash.Length}) in PlayerSaveData";
+                return false;
             }
 
             string owners = string.Join(
@@ -319,6 +327,30 @@ public static class Il2CppSemanticExtractor
             genericTypeInfo);
         error = null;
         return true;
+    }
+
+    private static bool TryResolveAdjacentInventoryStashPair(
+        IReadOnlyList<Il2CppDumpField> inventoryFields,
+        IReadOnlyList<Il2CppDumpField> stashFields,
+        out Il2CppDumpField? inventoryField,
+        out Il2CppDumpField? stashField)
+    {
+        var pairs = inventoryFields
+            .SelectMany(inventory => stashFields
+                .Where(stash => stash.Offset == inventory.Offset + 8)
+                .Select(stash => (Inventory: inventory, Stash: stash)))
+            .ToArray();
+
+        if (pairs.Length == 1)
+        {
+            inventoryField = pairs[0].Inventory;
+            stashField = pairs[0].Stash;
+            return true;
+        }
+
+        inventoryField = null;
+        stashField = null;
+        return false;
     }
 
     private static bool IsStageStaticClass(Il2CppDumpClass klass)
