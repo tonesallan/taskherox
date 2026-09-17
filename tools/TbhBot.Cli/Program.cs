@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using TbhBot.Core;
+using TaskHeroX.Core;
 using TaskHeroX.Core.Automation;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -18,7 +18,7 @@ if (args.Length >= 2 && args[0] == "--verify-offsets")
 // Verifica que os offsets estão EMBUTIDOS no assembly do Core e carregam (não precisa do jogo).
 if (args.Contains("--verify-embedded"))
 {
-    var asm = typeof(TbhBot.Core.Engine).Assembly;
+    var asm = typeof(TaskHeroX.Core.Engine).Assembly;
     var names = asm.GetManifestResourceNames();
     Console.WriteLine("recursos embutidos: " + (names.Length == 0 ? "(nenhum)" : string.Join(", ", names)));
     var res = System.Array.Find(names, n => n.EndsWith("json", StringComparison.OrdinalIgnoreCase));
@@ -52,7 +52,7 @@ if (args.Contains("--feed"))
     string? fh = fi + 1 < args.Length && !args[fi + 1].StartsWith("--") ? args[fi + 1] : null;
     if (fh is null)
     {
-        var e0 = new TbhBot.Core.Engine();
+        var e0 = new TaskHeroX.Core.Engine();
         if (!e0.Attach()) { Console.WriteLine("passe o hash: --feed <hash> (ou abra o jogo)"); return; }
         fh = e0.BuildHash;
     }
@@ -70,7 +70,7 @@ if (args.Contains("--actk-soak"))
 {
     int si = Array.IndexOf(args, "--actk-soak");
     int secs = si + 1 < args.Length && int.TryParse(args[si + 1], out var sv) ? sv : 45;
-    var ae = new TbhBot.Core.Engine();
+    var ae = new TaskHeroX.Core.Engine();
     if (!ae.Attach()) { Console.WriteLine("[x] jogo não está aberto"); return; }
     Console.WriteLine($"attach pid={ae.Target.ProcessId} build={ae.BuildHash} offsets={ae.OffsetsLoaded}");
 
@@ -113,7 +113,7 @@ if (args.Contains("--actk-soak"))
 // e executa Evolve() de verdade só pra confirmar o auto-desligar quando já se está no topo.
 if (args.Contains("--evolve"))
 {
-    var ev = new TbhBot.Core.Engine();
+    var ev = new TaskHeroX.Core.Engine();
     ev.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!ev.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     var (mx, cur, wave) = ev.Save.StageProgress();
@@ -160,7 +160,7 @@ if (args.Contains("--evolve"))
 // O CLI sozinho lê 197; o painel mostra "jogo fechado ou resolvendo offsets…". A diferença é ESTA.
 if (args.Contains("--runes-contended"))
 {
-    var re = new TbhBot.Core.Engine();
+    var re = new TaskHeroX.Core.Engine();
     re.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!re.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
 
@@ -283,7 +283,7 @@ if (args.Contains("--restart-watch"))
     int wi = Array.IndexOf(args, "--restart-watch");
     if (wi + 1 < args.Length && int.TryParse(args[wi + 1], out int s)) segundos = s;
 
-    var we = new TbhBot.Core.Engine();
+    var we = new TaskHeroX.Core.Engine();
     we.Log += m => Console.WriteLine($"        [engine] {m}");
     nint basePrev = 0;
     int pidPrev = 0;
@@ -318,7 +318,7 @@ if (args.Contains("--restart-watch"))
 // (padrão inteiro, exige 57). Com o cheat ligado elas divergem — e patchar a antiga era o "godmode 2x".
 if (args.Contains("--godsite"))
 {
-    var ge = new TbhBot.Core.Engine();
+    var ge = new TaskHeroX.Core.Engine();
     if (!ge.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     nint b = ge.Target.ModuleBase;
     nint velho = ge.Scanner.FindAob(TaskHeroX.Core.Il2Cpp.GameConstants.AobGodmode);
@@ -341,7 +341,7 @@ if (args.Contains("--godsite"))
 
 if (args.Contains("--peek"))
 {
-    var pe = new TbhBot.Core.Engine();
+    var pe = new TaskHeroX.Core.Engine();
     if (!pe.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     var (mx, cur, wv) = pe.Save.StageProgress();
     Console.WriteLine($"pid={pe.Target.ProcessId}  stage: max={mx} cur={cur} wave={wv}");
@@ -360,7 +360,7 @@ if (args.Contains("--peek"))
 if (args.Contains("--autobox"))
 {
     string[] nm = ["NORMAL", "BOSS", "ACTBOSS"];
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     var boxes = eng.AutoBox.FindStageBoxes();
@@ -374,7 +374,7 @@ if (args.Contains("--autobox"))
 // Diagnóstico: attach + READS (StageProgress) em loop durante o boot — o attach/read crasha o jogo?
 if (args.Contains("--readspam"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     Console.WriteLine("tentando attachar (retry até subir)...");
     for (int i = 0; i < 60 && !eng.Attach(); i++) System.Threading.Thread.Sleep(1000);
     if (!eng.IsAttached) { Console.WriteLine("[x] não attachou"); return; }
@@ -396,7 +396,7 @@ if (args.Contains("--readspam"))
 // Diagnóstico: RemoteCall (CreateRemoteThread) em loop durante o boot — isso crasha o jogo bootando?
 if (args.Contains("--rcspam"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     Console.WriteLine("attachando (retry)...");
     for (int i = 0; i < 60 && !eng.Attach(); i++) System.Threading.Thread.Sleep(1000);
     if (!eng.IsAttached) { Console.WriteLine("[x] não attachou"); return; }
@@ -431,7 +431,7 @@ if (args.Contains("--priceidx"))
 // Diagnóstico READ-ONLY de Evolution/Auto-boss: progresso, can-enter, soulstones, alvo do evolve. NÃO consome.
 if (args.Contains("--stagenav"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
 
@@ -456,7 +456,7 @@ if (args.Contains("--stagenav"))
 // Diagnóstico do LAYOUT da árvore de runas: reproduz o algoritmo e reporta a distribuição espacial.
 if (args.Contains("--runelayout"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     var defs = eng.RuneDefs.Read();
     Console.WriteLine($"defs: {defs.Count}");
@@ -490,7 +490,7 @@ if (args.Contains("--runelayout"))
 // Teste das features de engine (rune defs, inventário, stage table).
 if (args.Contains("--features"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     var defs = eng.RuneDefs.Read();
@@ -519,7 +519,7 @@ if (args.Contains("--features"))
 // Teste do AUTO-FUSE: --fuse = preview (não consome). --fuse --go = FUNDE de verdade (consome 9 itens -> 1).
 if (args.Contains("--fuse"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     var prev = eng.AutoFuse.Preview();
@@ -539,7 +539,7 @@ if (args.Contains("--fuse"))
 // Teste do AUTO-STASH ao vivo: resolve 'ra' + move alguns itens inv->baú (maxn=3, gentil).
 if (args.Contains("--stash"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     nint ra = eng.AutoStash.ResolveRa();
@@ -556,7 +556,7 @@ if (args.Contains("--stash"))
 // Teste da resolução IL2CPP (export table + RemoteCall + class_from_name).
 if (args.Contains("--klass"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     long ex = TaskHeroX.Core.Memory.RemoteCall.ResolveExport(eng.Memory, "il2cpp_class_from_name");
@@ -570,7 +570,7 @@ if (args.Contains("--klass"))
 // Teste do DISPATCHER main-thread (transporte seguro: cmd1 argP=0 = no-op, não chama função do jogo).
 if (args.Contains("--dispatch"))
 {
-    var eng = new TbhBot.Core.Engine();
+    var eng = new TaskHeroX.Core.Engine();
     eng.Log += m => Console.WriteLine($"  [engine] {m}");
     if (!eng.Attach()) { Console.WriteLine("[x] jogo não aberto"); return; }
     Console.WriteLine($"attach pid={eng.Target.ProcessId}  hash={TaskHeroX.Core.Il2Cpp.BuildInfo.DllHash(eng.Target.ModulePath)}");
@@ -599,7 +599,7 @@ if (args.Contains("--e2e"))
     string cacheDir = (i >= 0 && i + 1 < args.Length)
         ? args[i + 1]
         : @"d:\SteamLibrary\steamapps\common\TaskbarHero\tbh_bot\_cache_bundle";
-    await TbhBot.Cli.E2E.RunAsync(new TbhBot.Core.Engine(), cacheDir);
+    await TbhBot.Cli.E2E.RunAsync(new TaskHeroX.Core.Engine(), cacheDir);
     return;
 }
 

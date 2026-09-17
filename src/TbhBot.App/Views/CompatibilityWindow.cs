@@ -314,7 +314,7 @@ public sealed class CompatibilityWindow : Window
         }
     }
 
-    private static ReadDiag RunReadDiagnostics(TbhBot.Core.Engine e)
+    private static ReadDiag RunReadDiagnostics(TaskHeroX.Core.Engine e)
     {
         int stats = 0, stage = 0, runes = 0, inventory = -1;
         bool progressOk = false, psd = false;

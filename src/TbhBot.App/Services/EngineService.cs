@@ -1,6 +1,6 @@
 using System.Windows;
 using TbhBot.App.Views;
-using TbhBot.Core;
+using TaskHeroX.Core;
 using TaskHeroX.Core.Automation;
 
 namespace TbhBot.App.Services;

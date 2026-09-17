@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using TbhBot.Core;
+using TaskHeroX.Core;
 using TaskHeroX.Core.Diagnostics;
 using TaskHeroX.Core.Game;
 using TaskHeroX.Core.Il2Cpp;

@@ -2,7 +2,7 @@ using TaskHeroX.Core.Game;
 using TaskHeroX.Core.Il2Cpp;
 using TaskHeroX.Core.Memory;
 
-namespace TbhBot.Core;
+namespace TaskHeroX.Core;
 
 /// <summary>
 /// Fachada de alto nÃ­vel: attach ao jogo, resoluÃ§Ã£o de offsets por build, cheats, leitura/escrita de save e

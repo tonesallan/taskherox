@@ -1,4 +1,4 @@
-using TbhBot.Core;
+using TaskHeroX.Core;
 
 namespace TaskHeroX.Core.Automation;
 

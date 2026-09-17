@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using TbhBot.Core;
+using TaskHeroX.Core;
 using TaskHeroX.Core.Game;
 using TaskHeroX.Core.Il2Cpp;
 

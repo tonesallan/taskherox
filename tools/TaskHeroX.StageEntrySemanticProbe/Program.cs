@@ -1,4 +1,4 @@
-using TbhBot.Core;
+using TaskHeroX.Core;
 using TaskHeroX.Core.Game;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
