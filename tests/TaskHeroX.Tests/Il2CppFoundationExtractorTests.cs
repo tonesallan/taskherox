@@ -151,7 +151,17 @@ public class CubeButtonHandler
 
 public static class uw.Cube
 {
-    public static Dictionary<ERecipeType, List<uw>> recipes; // 0x20
+    public static Action<ECubeSynthesisResult> resultEvent; // 0x20
+    public static EGradeType grade; // 0xE0
+    public static Dictionary<ERecipeType, List<uw>> recipes; // 0xF8
+    public static Dictionary<ERecipeType, uw> currentByType; // 0x108
+    public static List<CubeInData> inputs; // 0x118
+    public static uw activeRecipe; // 0x158
+    public static bool busy; // 0x160
+    public static ObscuredInt cubeLevel; // 0x1E8
+    public static SynthesisRecipeInfoData recipe; // 0x260
+    public static EItemSynthesisType synthesisType; // 0x274
+    public static uw levelRecipe; // 0x278
     // RVA: 0x1B00
     public static void setType(EItemSynthesisType a) { }
     // RVA: 0x1C00
@@ -260,6 +270,18 @@ public static class uw.Cube
         Assert.Equal(0x2F00L, offsets.Symbols["eby"]);
         Assert.Equal(0x3000L, offsets.Symbols["hgr"]);
         Assert.Equal([0x2D00L], offsets.Ynj);
+        Assert.Equal(0xE0L, offsets.Symbols["cube_grade"]);
+        Assert.Equal(0xF8L, offsets.Symbols["cube_bers"]);
+        Assert.Equal(0x118L, offsets.Symbols["cube_inlist"]);
+        Assert.Equal(0x158L, offsets.Symbols["cube_active"]);
+        Assert.Equal(0x160L, offsets.Symbols["cube_busy"]);
+        Assert.Equal(0x274L, offsets.Symbols["cube_type"]);
+        Assert.Equal(0x278L, offsets.Symbols["cube_lvrecipe"]);
+        Assert.Equal(0x1E8L, offsets.Symbols["cube_level_off"]);
+        Assert.Equal(0x260L, offsets.Symbols["cube_recipe"]);
+        Assert.Equal(0x108L, offsets.Symbols["cube_beru"]);
+        Assert.Equal(0x20L, offsets.Symbols["cube_resultevt"]);
+        Assert.Equal(0x1B00L, offsets.Symbols["ilx"]);
 
         Assert.True(Il2CppOffsetCache.TryValidate(offsets, out string? validationError), validationError);
     }
