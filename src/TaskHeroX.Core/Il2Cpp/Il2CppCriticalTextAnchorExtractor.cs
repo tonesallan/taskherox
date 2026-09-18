@@ -19,7 +19,11 @@ public static class Il2CppCriticalTextAnchorExtractor
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex ActionType = new(
-        @"^Action<[^>]+>$",
+        @"^Action<\w+>$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex SimpleWordType = new(
+        @"^\w+$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static bool TryExtract(
@@ -75,37 +79,57 @@ public static class Il2CppCriticalTextAnchorExtractor
         }
         result.Symbols["llx"] = llx;
 
-        var moveMatches = classes
-            .SelectMany(klass => klass.Methods
-                .Select(method => (Class: klass, Method: method, Parsed: Parse(method.Signature)))
-                .Where(item => item.Parsed is not null &&
-                               string.Equals(item.Method.Visibility, "public", StringComparison.Ordinal) &&
-                               !item.Parsed.IsStatic &&
-                               item.Parsed.ParameterTypes.Count == 2 &&
-                               item.Parsed.ParameterTypes[0] == "MoveRequest" &&
-                               ActionType.IsMatch(item.Parsed.ParameterTypes[1])))
-            .ToArray();
-        if (moveMatches.Length != 1)
+        // O legado usa re.search(), portanto escolhe o PRIMEIRO metodo publico com a assinatura
+        // MoveRequest + Action<T> na ordem textual do dump. Em seguida, procura a ultima classe
+        // self-generic singleton declarada antes desse metodo; ela e o ra_class. Reproduzimos essa
+        // semantica explicitamente em vez de exigir unicidade global, que nao existe nos builds atuais.
+        (Il2CppDumpClass Class, Il2CppDumpMethod Method, Il2CppMethodSignatureInfo Parsed)? moveMatch = null;
+        int moveClassIndex = -1;
+
+        for (int classIndex = 0; classIndex < classes.Count && moveMatch is null; classIndex++)
+        {
+            Il2CppDumpClass klass = classes[classIndex];
+            foreach (Il2CppDumpMethod method in klass.Methods)
+            {
+                Il2CppMethodSignatureInfo? parsed = Parse(method.Signature);
+                if (parsed is null ||
+                    !string.Equals(method.Visibility, "public", StringComparison.Ordinal) ||
+                    parsed.IsStatic ||
+                    !SimpleWordType.IsMatch(parsed.ReturnType) ||
+                    parsed.ParameterTypes.Count != 2 ||
+                    parsed.ParameterTypes[0] != "MoveRequest" ||
+                    !ActionType.IsMatch(parsed.ParameterTypes[1]))
+                    continue;
+
+                moveMatch = (klass, method, parsed);
+                moveClassIndex = classIndex;
+                break;
+            }
+        }
+
+        if (moveMatch is null)
         {
             anchors = null;
-            string details = string.Join(
-                ", ",
-                moveMatches.Select(item =>
-                    $"{item.Class.Name}.{item.Parsed!.MethodName}@0x{item.Method.Rva:X}"));
-            error = $"move-manager method ambiguous ({moveMatches.Length})" +
-                    (details.Length > 0 ? $": {details}" : string.Empty);
+            error = "move-manager method missing";
             return false;
         }
 
-        string moveClass = moveMatches[0].Class.Name;
-        if (!IsSelfGenericSingleton(moveMatches[0].Class))
+        Il2CppDumpClass? moveManagerClass = null;
+        for (int i = 0; i <= moveClassIndex; i++)
+        {
+            if (IsSelfGenericSingleton(classes[i]))
+                moveManagerClass = classes[i];
+        }
+
+        if (moveManagerClass is null)
         {
             anchors = null;
-            error = $"move-manager {moveClass} is not a self-generic singleton";
+            error = $"move-manager singleton missing before {moveMatch.Value.Class.Name}.{moveMatch.Value.Parsed.MethodName}@0x{moveMatch.Value.Method.Rva:X}";
             return false;
         }
-        result.Symbols["iw"] = moveMatches[0].Method.Rva;
-        result.MoveManagerClass = moveClass;
+
+        result.Symbols["iw"] = moveMatch.Value.Method.Rva;
+        result.MoveManagerClass = moveManagerClass.Name;
 
         Il2CppDumpClass[] cubeClasses = classes
             .Where(klass => string.Equals(klass.Name, "Cube", StringComparison.Ordinal) ||
