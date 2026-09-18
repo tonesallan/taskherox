@@ -10,6 +10,7 @@ namespace TaskHeroX.Core;
 /// </summary>
 public sealed class Engine : IDisposable
 {
+    public const string AutoExtractOffsetsSource = "auto-extract-csharp";
     public ProcessTarget   Target   { get; } = new();
     public MemoryAccess    Memory   { get; private set; } = null!;
     public SymbolTable     Symbols  { get; private set; } = null!;
@@ -205,7 +206,7 @@ public sealed class Engine : IDisposable
         if (!SameAttachedBuild(hash, modulePath))
             return false;
 
-        if (!LoadOffsetsFrom(generated.CachePath!, source: "auto-extraÃ§Ã£o C#"))
+        if (!LoadOffsetsFrom(generated.CachePath!, source: AutoExtractOffsetsSource))
         {
             Emit("cache gerado pelo auto-offset C# foi rejeitado na carga final");
             return false;
