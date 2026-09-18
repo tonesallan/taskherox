@@ -36,7 +36,7 @@ Legenda: 🟢 feito · 🟡 em andamento · ⚪ pendente
 - Singletons (`bau`/`bam`) via TypeInfo, `static_fields` (klass+0xB8), resolução do `PlayerSaveData`.
 - Cache de offsets por **build-hash** (MD5 dos primeiros 2.000.000 bytes) + invalidação por versão.
 - Build desconhecido: `known/cache/embedded -> feed -> auto-extração C#`; o dumper embutido roda em background, valida hash antes/depois, rejeita `jgc` genérico e só então carrega o cache na sessão.
-- **Pronto quando:** resolve o PSD e lê a **lista de runas** — igual ao Python. **Validado:** build `7fc7437300cf`, feed 404/sem offsets -> fallback C# -> cache v8 -> `OffsetsLoaded=True`, mantendo o jogo vivo.
+- **Pronto quando:** resolve o PSD e lê a **lista de runas** — igual ao Python. **Validado:** build `7fc7437300cf`, feed 404/sem offsets -> fallback C# -> cache v9 -> `OffsetsLoaded=True`, mantendo o jogo vivo.
 
 ## Fase 3 — Primitivos de jogo + cheats (paridade de engine) 🟢 (dispatcher ⚪)
 **Meta:** o engine C# faz tudo que o Python faz.
