@@ -9,7 +9,7 @@ Um `offsets_<hash>.json` por build do jogo. **É daqui que o painel se cura sozi
 Quando o jogo atualiza, todos os RVAs mudam e as features que dependem deles param (inventário, runas,
 stages, nível do cubo, ACTk). Reextrair exige o Il2CppDumper, que precisa de .NET 6 — quase ninguém tem.
 
-Com o feed, o painel instalado faz um GET do JSON do build novo e volta a funcionar **na mesma sessão**. Se o build ainda não estiver publicado aqui (404), o TaskHeroX agora tenta o **auto-offset C# local** como último fallback: usa o Il2CppDumper embutido, extrai/valida os símbolos, grava um cache v8 e o carrega sem reiniciar o painel. Se qualquer etapa falhar ou ficar ambígua, o fluxo é fail-closed e o painel permanece no modo degradado/AOB.
+Com o feed, o painel instalado faz um GET do JSON do build novo e volta a funcionar **na mesma sessão**. Se o build ainda não estiver publicado aqui (404), o TaskHeroX agora tenta o **auto-offset C# local** como último fallback: usa o Il2CppDumper embutido, extrai/valida os símbolos, grava um cache v9 e o carrega sem reiniciar o painel. O contrato v9 exige também o layout write-sensitive do Cube (`cube_grade`, `cube_bers`, `cube_inlist`, `cube_active`, `cube_busy`, `cube_type`, `cube_lvrecipe`, `cube_level_off`), evitando herdar offsets de outra build. Se qualquer etapa falhar ou ficar ambígua, o fluxo é fail-closed e o painel permanece no modo degradado/AOB.
 
 Consumido por `src/TaskHeroX.Core/Update/OffsetsFeed.cs`. A ordem de resolução é: **KnownBuilds -> cache local versionado -> cache embutido -> feed -> auto-extração C#**. Tanto o feed quanto o fallback C# gravam em `<pasta do exe>/cache/offsets_<hash>.json`; no próximo start esse cache passa a ser encontrado antes das fontes remotas.
 
