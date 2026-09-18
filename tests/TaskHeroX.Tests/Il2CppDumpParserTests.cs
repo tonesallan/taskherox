@@ -63,6 +63,25 @@ public class InventorySaveData // TypeDefIndex: 1234
     }
 
     [Fact]
+    public void Parse_RetainsMethodAttributes()
+    {
+        const string dump = """
+public static class uw.Cube
+{
+    [AsyncStateMachine(typeof(uw.Cube.<TriggerCurrentRecipeLogic>d__42))]
+    // RVA: 0x1B00 Offset: 0x1B00 VA: 0x180001B00
+    public static Task abc() { }
+}
+""";
+
+        Il2CppDumpClass klass = Assert.Single(Il2CppDumpParser.Parse(dump));
+        Il2CppDumpMethod method = Assert.Single(klass.Methods);
+
+        Assert.Equal(0x1B00, method.Rva);
+        Assert.Contains("<TriggerCurrentRecipeLogic>", method.Attributes, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Parse_DoesNotLeakPendingRvaAcrossClassDeclarations()
     {
         const string dump = """
