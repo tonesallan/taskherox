@@ -17,6 +17,10 @@
   <ItemGroup>
     <EmbeddedResource Include="Offsets\*.json" />
     <EmbeddedResource Include="Data\item_prices.json" />
+    <EmbeddedResource Include="..\..\python_old_project\tools\Il2CppDumper\Il2CppDumper.exe"
+                      LogicalName="TaskHeroX.Core.Tools.Il2CppDumper.exe" />
+    <EmbeddedResource Include="..\..\python_old_project\tools\Il2CppDumper\config.json"
+                      LogicalName="TaskHeroX.Core.Tools.Il2CppDumper.config.json" />
   </ItemGroup>
 
 </Project>
