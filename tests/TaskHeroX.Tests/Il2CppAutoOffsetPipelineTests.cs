@@ -63,6 +63,8 @@ public sealed class Il2CppAutoOffsetPipelineTests
             "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa", "ima",
             "iuw", "izb", "inv_slots_off", "stash_off",
             "uimgr_ti", "uimain", "eby",
+            "cube_grade", "cube_bers", "cube_inlist", "cube_active",
+            "cube_busy", "cube_type", "cube_lvrecipe", "cube_level_off",
         })
         {
             offsets.Symbols[key] = 1;
