@@ -140,11 +140,11 @@ public sealed class Engine : IDisposable
     /// jogo atualizou e o build ainda nÃ£o Ã© conhecido por este exe. Cura a sessÃ£o em andamento: as features
     /// que dependem de RVA voltam sem precisar reiniciar o painel.
     /// </summary>
-    public bool LoadOffsetsFrom(string path)
+    public bool LoadOffsetsFrom(string path, string source = "feed")
     {
         if (Symbols is null || !Symbols.LoadOffsetsJson(path, requireVersion: true)) return false;
         OffsetsLoaded = true;
-        Emit($"offsets do build {BuildHash} baixados do feed â€” features completas de volta");
+        Emit($"offsets do build {BuildHash} carregados de {source} â€” features completas de volta");
         return true;
     }
 
