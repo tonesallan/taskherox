@@ -133,6 +133,23 @@ public class CoreTests
     }
 
     [Fact]
+    public void SupportBundleCollector_UsesCanonicalEngineOffsetSource()
+    {
+        using var engine = new Engine();
+        SetBackingField(engine, "OffsetsLoaded", true);
+        SetBackingField(engine, "OffsetsSource", Engine.AutoExtractOffsetsSource);
+
+        var bundle = SupportBundleCollector.Collect(
+            engine,
+            "0.1.1",
+            [],
+            new DateTimeOffset(2026, 9, 18, 15, 45, 0, TimeSpan.Zero));
+
+        Assert.True(bundle.Offsets.Loaded);
+        Assert.Equal(Engine.AutoExtractOffsetsSource, bundle.Offsets.Source);
+    }
+
+    [Fact]
     public void SupportBundleCollector_StaleAttachWithDeadProcess_ReportsOffline()
     {
         var engine = new Engine();
