@@ -28,6 +28,8 @@ public static class Il2CppOffsetParityComparer
         "uo_ti", "uo_dict", "uo_cur_cache", "uo_max", "uo_cur", "uo_wave",
         "bal_ti", "stage_off", "jgk", "jgq", "jgd",
         "uimgr_ti", "uimain", "eby",
+        "cube_grade", "cube_bers", "cube_inlist", "cube_active",
+        "cube_busy", "cube_type", "cube_lvrecipe",
     ];
 
     public static Il2CppOffsetParityReport Compare(
@@ -67,6 +69,18 @@ public static class Il2CppOffsetParityComparer
 
         if (HasNonNullProperty(root, "hgr"))
             CompareNumeric(generated, root, "hgr", "hgr", requiredExpected: false, mismatches);
+
+        // Caches historicos muito antigos podem nao registrar cube_level_off, mas o pipeline novo
+        // exige que ele seja extraido antes de READY. Os demais extras de Cube sao comparados quando
+        // a referencia os possui.
+        foreach (string key in new[]
+        {
+            "cube_level_off", "cube_recipe", "cube_beru", "cube_resultevt", "ilx",
+        })
+        {
+            if (HasNonNullProperty(root, key))
+                CompareNumeric(generated, root, key, key, requiredExpected: false, mismatches);
+        }
 
         // O singleton pode ser representado por uma das duas rotas. Compara somente a rota presente
         // no cache histórico, sem exigir que ambas existam simultaneamente.
