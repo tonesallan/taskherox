@@ -6,13 +6,13 @@ padrão de leitura + o GIL, não a linguagem) e só depois portar UI/overlay/dis
 
 Legenda: 🟢 feito · 🟡 em andamento · ⚪ pendente
 
-## Estado atual — Fases 0–4 implementadas e VALIDADAS AO VIVO (na box, build `c824ed7a2bb1`)
+## Estado atual — Fases 0–4 implementadas; auto-offset C# validado ao vivo em build desconhecido (`7fc7437300cf`)
 - **Fase 1** batch read **~200x** (8192 leituras: sequencial ~10 ms vs batch ~0.05 ms) + AOB scanner OK.
-- **Fase 2** build-hash + `KnownBuilds` + **loader do cache `offsets_<hash>.json`** (ponte enquanto a extração por dump em C# não é portada).
+- **Fase 2** build-hash + `KnownBuilds` + cache versionado + **auto-offset C# por dump** para build desconhecido, com fallback fail-closed e recuperação na mesma sessão.
 - **Fase 3** leitura ao vivo confirmada: **inventário 63 itens · runas 197 · stage max=4310/cur=4309 · 25 stats** (Attack Damage=1e6). Cheats/ObscuredInt portados fiéis.
 - **Fase 4** AutomationLoop + Watchdog (Task/CancellationToken) rodam e encerram limpo.
 
-**Deferidos (marcados no código):** (a) o **dispatcher main-thread** (code-cave — precisa disassembler + iteração ao vivo; `Game/DISPATCHER_PORT_NOTES.md`); (b) a **extração de offsets por dump** em C# (o loader de JSON cobre builds já resolvidos pelo Python); (c) `cube_slot` neste build (o Python resolve por disasm).
+**Deferidos (marcados no código):** (a) itens ainda documentados separadamente no checklist de paridade; (b) `cube_slot` neste build quando depender de lógica específica ainda não coberta. A **extração de offsets por dump em C# deixou de ser deferida**: está integrada ao fallback de build desconhecido.
 
 ---
 
@@ -30,12 +30,13 @@ Legenda: 🟢 feito · 🟡 em andamento · ⚪ pendente
 - Helpers: pointer-chase (`Resolve(base, offsets…)`), leitura de **string IL2CPP** (len@0x10 + UTF-16@0x14).
 - **Pronto quando:** lê a base, valida ponteiros e acha um AOB conhecido (ex.: prólogo de um cheat).
 
-## Fase 2 — IL2CPP + offsets + auto-offset 🟢 (dump-extraction ⚪)
+## Fase 2 — IL2CPP + offsets + auto-offset 🟢
 **Meta:** paridade com o sistema de offsets que se auto-atualiza por build.
-- Resolução de símbolos por **assinatura** (portar `_extract_from_dump`).
+- Resolução de símbolos por **assinatura**, com port C# do fluxo legado `_extract_from_dump`.
 - Singletons (`bau`/`bam`) via TypeInfo, `static_fields` (klass+0xB8), resolução do `PlayerSaveData`.
-- Cache de offsets por **build-hash** (md5 de N MB do módulo) + invalidação por versão.
-- **Pronto quando:** resolve o PSD e lê a **lista de runas** — igual ao Python.
+- Cache de offsets por **build-hash** (MD5 dos primeiros 2.000.000 bytes) + invalidação por versão.
+- Build desconhecido: `known/cache/embedded -> feed -> auto-extração C#`; o dumper embutido roda em background, valida hash antes/depois, rejeita `jgc` genérico e só então carrega o cache na sessão.
+- **Pronto quando:** resolve o PSD e lê a **lista de runas** — igual ao Python. **Validado:** build `7fc7437300cf`, feed 404/sem offsets -> fallback C# -> cache v8 -> `OffsetsLoaded=True`, mantendo o jogo vivo.
 
 ## Fase 3 — Primitivos de jogo + cheats (paridade de engine) 🟢 (dispatcher ⚪)
 **Meta:** o engine C# faz tudo que o Python faz.
