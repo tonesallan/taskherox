@@ -116,6 +116,18 @@ public sealed class Il2CppOffsetParityComparerTests
         result.Symbols["eby"] = 36;
         result.Symbols["hgr"] = 37;
         result.Ynj.Add(38);
+        result.Symbols["cube_grade"] = 40;
+        result.Symbols["cube_bers"] = 41;
+        result.Symbols["cube_inlist"] = 42;
+        result.Symbols["cube_active"] = 43;
+        result.Symbols["cube_busy"] = 44;
+        result.Symbols["cube_type"] = 45;
+        result.Symbols["cube_lvrecipe"] = 46;
+        result.Symbols["cube_level_off"] = 47;
+        result.Symbols["cube_recipe"] = 48;
+        result.Symbols["cube_beru"] = 49;
+        result.Symbols["cube_resultevt"] = 50;
+        result.Symbols["ilx"] = 51;
         return result;
     }
 
@@ -155,6 +167,18 @@ public sealed class Il2CppOffsetParityComparerTests
   "uimain":35,
   "eby":36,
   "hgr":37,
+  "cube_grade":40,
+  "cube_bers":41,
+  "cube_inlist":42,
+  "cube_active":43,
+  "cube_busy":44,
+  "cube_type":45,
+  "cube_lvrecipe":46,
+  "cube_level_off":47,
+  "cube_recipe":48,
+  "cube_beru":49,
+  "cube_resultevt":50,
+  "ilx":51,
   "ynj":[38],
   "inv_class":"box",
   "ra_class":"move",
