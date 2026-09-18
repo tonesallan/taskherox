@@ -111,6 +111,11 @@ public sealed class Il2CppOffsetParityComparerTests
         result.Symbols["uo_max"] = 31;
         result.Symbols["uo_cur"] = 32;
         result.Symbols["uo_wave"] = 33;
+        result.Symbols["uimgr_ti"] = 34;
+        result.Symbols["uimain"] = 35;
+        result.Symbols["eby"] = 36;
+        result.Symbols["hgr"] = 37;
+        result.Ynj.Add(38);
         return result;
     }
 
@@ -146,6 +151,11 @@ public sealed class Il2CppOffsetParityComparerTests
   "jgq":25,
   "jgd":26,
   "jgc":28,
+  "uimgr_ti":34,
+  "uimain":35,
+  "eby":36,
+  "hgr":37,
+  "ynj":[38],
   "inv_class":"box",
   "ra_class":"move",
   "inv_klass_ti":30
