@@ -15,6 +15,61 @@ if (args.Length >= 2 && args[0] == "--verify-offsets")
     return;
 }
 
+// Smoke do fallback que o app usa para build desconhecido: usa o Il2CppDumper EMBUTIDO no Core,
+// revalida o hash antes/depois da extração e só persiste um cache aceito pelo SymbolTable.
+// Uso: --auto-offset-fallback <GameAssembly.dll> [output.json]
+if (args.Length >= 2 && args[0] == "--auto-offset-fallback")
+{
+    string gameAssembly = Path.GetFullPath(args[1]);
+    string? hash = TaskHeroX.Core.Il2Cpp.BuildInfo.DllHash(gameAssembly);
+    if (string.IsNullOrWhiteSpace(hash))
+    {
+        Console.WriteLine("[FAIL] nao consegui calcular o build hash");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    string output = args.Length >= 3
+        ? Path.GetFullPath(args[2])
+        : Path.Combine(Path.GetTempPath(), $"TaskHeroX-offsets-{hash}-bundled-fallback.json");
+
+    Console.WriteLine($"build={hash}");
+    Console.WriteLine($"output={output}");
+    Console.WriteLine("[1/2] executando fallback com Il2CppDumper embutido...");
+
+    TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallbackResult result =
+        await TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallback.TryGenerateAsync(
+            hash,
+            gameAssembly,
+            output);
+
+    if (!result.Success)
+    {
+        Console.WriteLine("[FAIL] " + (result.Error ?? "falha desconhecida"));
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    var probe = new TaskHeroX.Core.Il2Cpp.SymbolTable();
+    if (!probe.LoadOffsetsJson(result.CachePath!, requireVersion: true) || probe.Has("jgc"))
+    {
+        Console.WriteLine("[FAIL] cache persistido foi rejeitado na leitura final");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine("[2/2] cache versionado recarregado");
+    Console.WriteLine($"  gra        0x{probe.Get("gra"):X}");
+    Console.WriteLine($"  upd        0x{probe.Get("upd"):X}");
+    Console.WriteLine($"  iw         0x{probe.Get("iw"):X}");
+    Console.WriteLine($"  uo_max     0x{probe.Get("uo_max"):X}");
+    Console.WriteLine($"  uo_cur     0x{probe.Get("uo_cur"):X}");
+    Console.WriteLine($"  uo_wave    0x{probe.Get("uo_wave"):X}");
+    Console.WriteLine($"  generic jgc? {probe.Has("jgc")}");
+    Console.WriteLine("[PASS] bundled auto-offset fallback concluido");
+    return;
+}
+
 // Extração C# opt-in: executa Il2CppDumper -> extrator -> validação -> JSON sem alterar o Engine.
 // Uso:
 //   --extract-offsets <Il2CppDumper.exe> <GameAssembly.dll> <global-metadata.dat> [expected.json] [output.json]
