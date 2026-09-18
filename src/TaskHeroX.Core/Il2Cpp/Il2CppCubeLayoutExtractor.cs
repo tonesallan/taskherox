@@ -129,7 +129,8 @@ public static partial class Il2CppCubeLayoutExtractor
                        parsed is not null &&
                        parsed.IsStatic &&
                        string.Equals(parsed.ReturnType, "void", StringComparison.Ordinal) &&
-                       parsed.ParameterTypes.SequenceEqual(["ERecipeType"], StringComparer.Ordinal);
+                       parsed.ParameterTypes.Count == 1 &&
+                       string.Equals(parsed.ParameterTypes[0], "ERecipeType", StringComparison.Ordinal);
             })
             .Select(method => method.Rva)
             .Where(rva => rva != 0)
