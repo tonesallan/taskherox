@@ -63,11 +63,12 @@ public sealed class EngineService
                 Post(() => StateChanged?.Invoke());
             }
 
-            // Build desconhecida: tenta buscar offsets no feed público do TaskHeroX uma vez por hash.
+            // Build desconhecida: uma tentativa por hash. A própria Engine preserva a ordem
+            // known/cache/embedded -> feed -> auto-extração C# fail-closed.
             if (now && !Engine.OffsetsLoaded && Engine.BuildHash is { Length: > 0 } h && _feedTried != h)
             {
                 _feedTried = h;
-                _ = FetchOffsetsAsync(h, ct);
+                _ = RecoverOffsetsAsync(h, ct);
             }
             try { await Task.Delay(1000, ct).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
@@ -76,59 +77,27 @@ public sealed class EngineService
 
     private string? _feedTried;
 
-    private async Task FetchOffsetsAsync(string hash, CancellationToken ct)
+    private async Task RecoverOffsetsAsync(string hash, CancellationToken ct)
     {
-        // Ordem deliberada para build desconhecido:
-        // 1) feed publicado/validado; 2) somente se o feed nao tiver o build, auto-extracao C# local.
-        // Known-build, cache local e recurso embutido ja foram tentados sincronamente por Engine.Attach().
-        var path = await TaskHeroX.Core.Update.OffsetsFeed.TryFetchAsync(hash, ct).ConfigureAwait(false);
-        if (ct.IsCancellationRequested) return;
-
-        if (path is not null &&
-            string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase) &&
-            Engine.LoadOffsetsFrom(path, source: "feed"))
+        bool recovered;
+        try
         {
-            Post(() => StateChanged?.Invoke());
-            return;
-        }
-
-        if (!IsAttached ||
-            !string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        RaiseLog($"feed sem offsets para {hash[..Math.Min(7, hash.Length)]} · iniciando auto-extração C# fail-closed");
-
-        TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallbackResult generated =
-            await TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallback.TryGenerateAsync(
-                hash,
-                Engine.Target.ModulePath,
-                TaskHeroX.Core.Update.OffsetsFeed.CachePath(hash),
+            recovered = await Engine.RecoverUnknownBuildOffsetsAsync(
                 cancellationToken: ct).ConfigureAwait(false);
-
-        if (ct.IsCancellationRequested) return;
-
-        if (!generated.Success)
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            if (string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
-                RaiseLog($"auto-offset C# não aceitou o build {hash[..Math.Min(7, hash.Length)]}: {generated.Error ?? "falha desconhecida"}");
+            return;
+        }
+        catch (Exception ex)
+        {
+            RaiseLog($"recuperação de offsets falhou: {ex.Message}");
             return;
         }
 
-        // A extracao pode levar alguns segundos. Nunca injeta offsets numa sessao que mudou de build
-        // enquanto o dumper trabalhava em background.
-        if (!IsAttached ||
-            !string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        if (Engine.LoadOffsetsFrom(generated.CachePath!, source: "auto-extração C#"))
-        {
-            RaiseLog($"auto-offset C# validado para {hash[..Math.Min(7, hash.Length)]}");
+        if (recovered &&
+            string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
             Post(() => StateChanged?.Invoke());
-        }
-        else
-        {
-            RaiseLog("cache gerado pelo auto-offset C# foi rejeitado na carga final");
-        }
     }
 
     /// <summary>
