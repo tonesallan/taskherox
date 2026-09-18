@@ -11,7 +11,7 @@ public sealed record Il2CppDumpField(string Type, string Name, long Offset, bool
 /// <summary>
 /// Método extraído de um <c>dump.cs</c>. O RVA vem do comentário imediatamente anterior ao método.
 /// </summary>
-public sealed record Il2CppDumpMethod(long Rva, string Signature, string Visibility);
+public sealed record Il2CppDumpMethod(long Rva, string Signature, string Visibility, string Attributes = "");
 
 /// <summary>
 /// Representação mínima de uma classe do <c>dump.cs</c>, equivalente ao subconjunto usado pelo
@@ -87,10 +87,20 @@ public static class Il2CppDumpParser
         var classes = new List<Il2CppDumpClass>();
         Il2CppDumpClass? current = null;
         long? pendingRva = null;
+        var pendingAttributes = new List<string>();
 
         string? line;
         while ((line = reader.ReadLine()) is not null)
         {
+            string trimmed = line.TrimStart();
+
+            if (trimmed.StartsWith("[", StringComparison.Ordinal) &&
+                !trimmed.StartsWith("[FieldOffset", StringComparison.Ordinal))
+            {
+                pendingAttributes.Add(trimmed);
+                continue;
+            }
+
             if (line.AsSpan().TrimStart().StartsWith("//", StringComparison.Ordinal))
             {
                 Match rvaMatch = RvaRegex.Match(line);
@@ -110,6 +120,7 @@ public static class Il2CppDumpParser
                     current = new Il2CppDumpClass(classMatch.Groups[1].Value, line);
                     classes.Add(current);
                     pendingRva = null;
+                    pendingAttributes.Clear();
                     continue;
                 }
             }
@@ -128,6 +139,7 @@ public static class Il2CppDumpParser
                         offset,
                         StaticFieldRegex.IsMatch(line)));
                 }
+                pendingAttributes.Clear();
                 continue;
             }
 
@@ -137,8 +149,10 @@ public static class Il2CppDumpParser
                 current.AddMethod(new Il2CppDumpMethod(
                     methodRva,
                     methodMatch.Groups[2].Value,
-                    methodMatch.Groups[1].Value));
+                    methodMatch.Groups[1].Value,
+                    string.Join("\n", pendingAttributes)));
                 pendingRva = null;
+                pendingAttributes.Clear();
             }
         }
 
