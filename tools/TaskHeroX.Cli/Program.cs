@@ -34,7 +34,7 @@ if (args.Length >= 1 && args[0] == "--recover-unknown-build")
     string? hash = recovery.BuildHash;
     Console.WriteLine($"pid={recovery.Target.ProcessId}");
     Console.WriteLine($"build={hash ?? "?"}");
-    Console.WriteLine($"offsets antes={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "—"}");
+    Console.WriteLine($"offsets antes={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "-"}");
 
     if (string.IsNullOrWhiteSpace(hash))
     {
@@ -63,7 +63,7 @@ if (args.Length >= 1 && args[0] == "--recover-unknown-build")
     bool recovered = await recovery.RecoverUnknownBuildOffsetsAsync(
         cachePathOverride: output);
 
-    Console.WriteLine($"[2/2] recovered={recovered} offsets={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "—"}");
+    Console.WriteLine($"[2/2] recovered={recovered} offsets={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "-"}");
 
     if (!recovered || !recovery.OffsetsLoaded)
     {
@@ -77,7 +77,7 @@ if (args.Length >= 1 && args[0] == "--recover-unknown-build")
             TaskHeroX.Core.Engine.AutoExtractOffsetsSource,
             StringComparison.Ordinal))
     {
-        Console.WriteLine($"[FAIL] fonte inesperada: {recovery.OffsetsSource ?? "—"}");
+        Console.WriteLine($"[FAIL] fonte inesperada: {recovery.OffsetsSource ?? "-"}");
         Environment.ExitCode = 1;
         return;
     }
