@@ -1,3 +1,4 @@
+using System.Text.Json;
 using TaskHeroX.Core.Il2Cpp;
 
 namespace TaskHeroX.Tests;
@@ -19,6 +20,9 @@ public sealed class Il2CppAutoOffsetFallbackTests
 
             Assert.True(File.Exists(exe));
             Assert.True(File.Exists(config));
+
+            using JsonDocument configJson = JsonDocument.Parse(File.ReadAllText(config));
+            Assert.False(configJson.RootElement.GetProperty("RequireAnyKey").GetBoolean());
 
             bool runtimeBundled =
                 new FileInfo(exe).Length >= 5_000_000 ||
