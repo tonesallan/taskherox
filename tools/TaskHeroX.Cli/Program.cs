@@ -72,7 +72,10 @@ if (args.Length >= 1 && args[0] == "--recover-unknown-build")
         return;
     }
 
-    if (!string.Equals(recovery.OffsetsSource, "auto-extração C#", StringComparison.Ordinal))
+    if (!string.Equals(
+            recovery.OffsetsSource,
+            TaskHeroX.Core.Engine.AutoExtractOffsetsSource,
+            StringComparison.Ordinal))
     {
         Console.WriteLine($"[FAIL] fonte inesperada: {recovery.OffsetsSource ?? "—"}");
         Environment.ExitCode = 1;
