@@ -121,7 +121,7 @@ public sealed class AutoFuse(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
         nint um = UiManager();
         long eby = _sym.Get("eby");
         if (um == 0 || eby == 0) { Log?.Invoke("fuse: UIManager/eby ausente"); return false; }
-        nint uimain = _mem.ReadPtr(um + 0xA8);
+        nint uimain = _mem.ReadPtr(um + (nint)_sym.Get("uimain", 0xA8));
         if (uimain == 0) return false;
         for (int attempt = 0; attempt < 3; attempt++)
         {
