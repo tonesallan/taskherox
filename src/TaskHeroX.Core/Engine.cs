@@ -114,7 +114,7 @@ public sealed class Engine : IDisposable
             // comparar duas sessÃµes mostra o problema na hora.
             Emit(loaded
                 ? $"build {hash} â€” offsets prontos (GameAssembly @ 0x{Target.ModuleBase:X})"
-                : $"build {hash} desconhecido e sem cache â€” modo AOB temporÃ¡rio; tentando feed/auto-offset C# em background");
+                : $"build {hash} desconhecido e sem cache - modo AOB temporario; tentando feed/auto-offset C# em background");
         }
 
         OffsetsLoaded = loaded;
@@ -151,7 +151,7 @@ public sealed class Engine : IDisposable
         if (Symbols is null || !Symbols.LoadOffsetsJson(path, requireVersion: true)) return false;
         OffsetsLoaded = true;
         OffsetsSource = source;
-        Emit($"offsets do build {BuildHash} carregados de {source} â€” features completas de volta");
+        Emit($"offsets do build {BuildHash} carregados de {source} - features completas de volta");
         return true;
     }
 
@@ -184,7 +184,7 @@ public sealed class Engine : IDisposable
         if (feedPath is not null && LoadOffsetsFrom(feedPath, source: "feed"))
             return true;
 
-        Emit($"feed sem offsets para {hash[..Math.Min(7, hash.Length)]} â€” iniciando auto-extraÃ§Ã£o C# fail-closed");
+        Emit($"feed sem offsets para {hash[..Math.Min(7, hash.Length)]} - iniciando auto-offset C# fail-closed");
 
         string cachePath = cachePathOverride ?? Update.OffsetsFeed.CachePath(hash);
         Il2CppAutoOffsetFallbackResult generated =
@@ -199,7 +199,7 @@ public sealed class Engine : IDisposable
         if (!generated.Success)
         {
             if (SameAttachedBuild(hash, modulePath))
-                Emit($"auto-offset C# nÃ£o aceitou o build {hash[..Math.Min(7, hash.Length)]}: {generated.Error ?? "falha desconhecida"}");
+                Emit($"auto-offset C# nao aceitou o build {hash[..Math.Min(7, hash.Length)]}: {generated.Error ?? "falha desconhecida"}");
             return false;
         }
 
