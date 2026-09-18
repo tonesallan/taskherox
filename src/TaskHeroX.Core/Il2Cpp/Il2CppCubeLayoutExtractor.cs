@@ -123,8 +123,10 @@ public static partial class Il2CppCubeLayoutExtractor
         long[] ilxCandidates = cube.Methods
             .Where(method =>
             {
-                Il2CppMethodSignature? parsed = Il2CppMethodSignatureParser.TryParse(method.Signature);
-                return parsed is not null &&
+                bool parsedOk = Il2CppMethodSignatureParser.TryParse(
+                    method.Signature, out Il2CppMethodSignatureInfo? parsed);
+                return parsedOk &&
+                       parsed is not null &&
                        parsed.IsStatic &&
                        string.Equals(parsed.ReturnType, "void", StringComparison.Ordinal) &&
                        parsed.ParameterTypes.SequenceEqual(["ERecipeType"], StringComparer.Ordinal);
