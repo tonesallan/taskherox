@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Reflection;
 
 namespace TaskHeroX.Core.Il2Cpp;
@@ -50,6 +52,16 @@ public static class Il2CppBundledDumperPackage
         string configPath = Path.Combine(directory, "config.json");
         if (!File.Exists(exePath) || !File.Exists(configPath))
             throw new InvalidDataException("pacote Il2CppDumper incompleto (exe/config ausente)");
+
+        // O pacote oficial vem com RequireAnyKey=true para uso interativo. O fallback roda sem console
+        // e com stdout/stderr redirecionados; portanto sempre força false antes de iniciar o processo.
+        JsonObject? config = JsonNode.Parse(File.ReadAllText(configPath)) as JsonObject;
+        if (config is null)
+            throw new InvalidDataException("config.json do Il2CppDumper invalido");
+        config["RequireAnyKey"] = false;
+        File.WriteAllText(
+            configPath,
+            config.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
 
         bool runtimeIsBundled =
             new FileInfo(exePath).Length >= MinimumSingleFileBytes ||
