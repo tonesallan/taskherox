@@ -26,6 +26,7 @@ public static class Il2CppOffsetCache
     [
         "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa",
         "ima", "iuw", "izb", "inv_slots_off", "stash_off",
+        "uimgr_ti", "uimain", "eby",
     ];
 
     public static bool TryValidate(Il2CppExtractedOffsets offsets, out string? error)
@@ -51,6 +52,12 @@ public static class Il2CppOffsetCache
         if (string.IsNullOrWhiteSpace(offsets.RaClass))
         {
             error = "missing critical symbol: ra_class";
+            return false;
+        }
+
+        if (offsets.Ynj.Count == 0 || offsets.Ynj.Any(value => value == 0))
+        {
+            error = "missing critical symbol: ynj";
             return false;
         }
 
