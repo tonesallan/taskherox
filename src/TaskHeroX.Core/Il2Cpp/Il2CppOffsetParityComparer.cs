@@ -51,8 +51,11 @@ public static class Il2CppOffsetParityComparer
         // o simbolo generico no resultado C#.
         if (HasNonNullProperty(root, "jgc_type13"))
             CompareNumeric(generated, root, "jgc_type13", "jgc_type13", requiredExpected: true, mismatches);
-        else
+        else if (HasNonNullProperty(root, "jgc"))
             CompareNumeric(generated, root, "jgc_type13", "jgc", requiredExpected: true, mismatches);
+        // Alguns caches históricos mais antigos não registravam nenhum validator de entrada.
+        // Nesse caso não há valor histórico contra o qual comparar; o resultado C# continua
+        // obrigado a passar Il2CppOffsetCache.TryValidate antes de chegar a este comparador.
 
         if (HasNonNullProperty(root, "jgc_type2"))
             CompareNumeric(generated, root, "jgc_type2", "jgc_type2", requiredExpected: true, mismatches);
