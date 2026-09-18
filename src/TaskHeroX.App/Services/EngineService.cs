@@ -78,9 +78,57 @@ public sealed class EngineService
 
     private async Task FetchOffsetsAsync(string hash, CancellationToken ct)
     {
+        // Ordem deliberada para build desconhecido:
+        // 1) feed publicado/validado; 2) somente se o feed nao tiver o build, auto-extracao C# local.
+        // Known-build, cache local e recurso embutido ja foram tentados sincronamente por Engine.Attach().
         var path = await TaskHeroX.Core.Update.OffsetsFeed.TryFetchAsync(hash, ct).ConfigureAwait(false);
-        if (path is null || ct.IsCancellationRequested) return;
-        if (Engine.LoadOffsetsFrom(path)) Post(() => StateChanged?.Invoke());
+        if (ct.IsCancellationRequested) return;
+
+        if (path is not null &&
+            string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase) &&
+            Engine.LoadOffsetsFrom(path, source: "feed"))
+        {
+            Post(() => StateChanged?.Invoke());
+            return;
+        }
+
+        if (!IsAttached ||
+            !string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        RaiseLog($"feed sem offsets para {hash[..Math.Min(7, hash.Length)]} · iniciando auto-extração C# fail-closed");
+
+        TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallbackResult generated =
+            await TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallback.TryGenerateAsync(
+                hash,
+                Engine.Target.ModulePath,
+                TaskHeroX.Core.Update.OffsetsFeed.CachePath(hash),
+                cancellationToken: ct).ConfigureAwait(false);
+
+        if (ct.IsCancellationRequested) return;
+
+        if (!generated.Success)
+        {
+            if (string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
+                RaiseLog($"auto-offset C# não aceitou o build {hash[..Math.Min(7, hash.Length)]}: {generated.Error ?? "falha desconhecida"}");
+            return;
+        }
+
+        // A extracao pode levar alguns segundos. Nunca injeta offsets numa sessao que mudou de build
+        // enquanto o dumper trabalhava em background.
+        if (!IsAttached ||
+            !string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (Engine.LoadOffsetsFrom(generated.CachePath!, source: "auto-extração C#"))
+        {
+            RaiseLog($"auto-offset C# validado para {hash[..Math.Min(7, hash.Length)]}");
+            Post(() => StateChanged?.Invoke());
+        }
+        else
+        {
+            RaiseLog("cache gerado pelo auto-offset C# foi rejeitado na carga final");
+        }
     }
 
     /// <summary>
