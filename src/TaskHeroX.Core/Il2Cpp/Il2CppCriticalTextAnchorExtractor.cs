@@ -194,16 +194,18 @@ public static class Il2CppCriticalTextAnchorExtractor
         }
         result.Symbols["ipu"] = ipuCandidates[0];
 
-        Il2CppDumpMethod[] triggerCandidates = cube.Methods
-            .Where(method => Parse(method.Signature)?.MethodName == "TriggerCurrentRecipeLogic")
-            .ToArray();
-        if (triggerCandidates.Length != 1)
+        Il2CppDumpMethod? triggerCandidate = cube.Methods
+            .FirstOrDefault(method =>
+                method.Attributes.Contains("<TriggerCurrentRecipeLogic>", StringComparison.Ordinal));
+
+        if (triggerCandidate is null)
         {
             anchors = null;
-            error = $"imx TriggerCurrentRecipeLogic anchor ambiguous ({triggerCandidates.Length})";
+            error = "imx TriggerCurrentRecipeLogic attribute anchor missing";
             return false;
         }
-        result.Symbols["imx"] = triggerCandidates[0].Rva;
+
+        result.Symbols["imx"] = triggerCandidate.Rva;
 
         anchors = result;
         error = null;
