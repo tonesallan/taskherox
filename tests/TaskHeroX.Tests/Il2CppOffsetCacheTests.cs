@@ -56,6 +56,14 @@ public sealed class Il2CppOffsetCacheTests
 
         Assert.False(ok);
         Assert.Equal("missing critical symbol: ynj", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("cube_grade");
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing critical symbol: cube_grade", error);
     }
 
     [Fact]
@@ -97,6 +105,8 @@ public sealed class Il2CppOffsetCacheTests
             "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa",
             "ima", "iuw", "izb", "inv_slots_off", "stash_off",
             "uimgr_ti", "uimain", "eby",
+            "cube_grade", "cube_bers", "cube_inlist", "cube_active",
+            "cube_busy", "cube_type", "cube_lvrecipe", "cube_level_off",
         })
         {
             offsets.Symbols[key] = 1;
