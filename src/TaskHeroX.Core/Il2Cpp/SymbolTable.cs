@@ -72,7 +72,7 @@ public sealed class SymbolTable
     /// <summary>
     /// Carrega um cache de offsets no formato do Python (<c>offsets_&lt;hash&gt;.json</c>): dict plano de
     /// string->numero, com <c>ynj</c> (lista) e <c>inv_class</c> (string). O mesmo loader é usado por
-    /// caches conhecidos, feed remoto e pelo cache v8 produzido pelo fallback C# de auto-extração.
+    /// caches conhecidos, feed remoto e pelo cache v9 produzido pelo fallback C# de auto-extração.
     /// </summary>
     /// <param name="requireVersion">
     /// true para caches EM DISCO (cache local / baixado do feed): exige <c>_ver &gt;= MinExtractVer</c>,
