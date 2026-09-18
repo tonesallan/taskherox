@@ -39,6 +39,23 @@ public sealed class Il2CppOffsetParityComparerTests
     }
 
     [Fact]
+    public void Compare_AcceptsCurrentSplitStageValidatorKeys()
+    {
+        Il2CppExtractedOffsets generated = CreateExpectedOffsets();
+        generated.Symbols["jgc_type2"] = 29;
+
+        string expected = BuildExpectedJson()
+            .Replace("\"jgc\":28", "\"jgc_type13\":28,\"jgc_type2\":29", StringComparison.Ordinal)
+            .Replace("\"inv_klass_ti\":30", "\"inv_klass_ti\":30,\"bau_ti\":null", StringComparison.Ordinal);
+
+        Il2CppOffsetParityReport report = Il2CppOffsetParityComparer.Compare(generated, expected);
+
+        Assert.True(report.IsMatch);
+        Assert.Empty(report.Mismatches);
+        Assert.DoesNotContain("jgc", generated.Symbols.Keys);
+    }
+
+    [Fact]
     public void Compare_UsesOnlyInventorySingletonRoutePresentInHistoricalCache()
     {
         Il2CppExtractedOffsets generated = CreateExpectedOffsets();
