@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text;
 
 namespace TaskHeroX.Core.Il2Cpp;
@@ -19,9 +18,6 @@ public sealed record Il2CppAutoOffsetFallbackResult(
 /// </summary>
 public static class Il2CppAutoOffsetFallback
 {
-    private const string DumperResource = "TaskHeroX.Core.Tools.Il2CppDumper.exe";
-    private const string ConfigResource = "TaskHeroX.Core.Tools.Il2CppDumper.config.json";
-
     public static async Task<Il2CppAutoOffsetFallbackResult> TryGenerateAsync(
         string expectedHash,
         string gameAssemblyPath,
@@ -60,11 +56,7 @@ public static class Il2CppAutoOffsetFallback
 
         try
         {
-            string dumperPath = Path.Combine(toolDir, "Il2CppDumper.exe");
-            string configPath = Path.Combine(toolDir, "config.json");
-
-            ExtractResource(DumperResource, dumperPath);
-            ExtractResource(ConfigResource, configPath);
+            string dumperPath = Il2CppBundledDumperPackage.Materialize(toolDir);
 
             var inputs = new Il2CppDumperInputs(
                 dumperPath,
@@ -119,25 +111,6 @@ public static class Il2CppAutoOffsetFallback
             TryDeleteFile(tempCache);
             TryDeleteDirectory(toolDir);
         }
-    }
-
-    private static void ExtractResource(string resourceName, string destination)
-    {
-        Assembly assembly = typeof(Il2CppAutoOffsetFallback).Assembly;
-        using Stream? source = assembly.GetManifestResourceStream(resourceName);
-        if (source is null)
-            throw new InvalidDataException($"recurso embutido ausente: {resourceName}");
-
-        using FileStream target = new(
-            destination,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None);
-
-        source.CopyTo(target);
-
-        if (target.Length == 0)
-            throw new InvalidDataException($"recurso embutido vazio: {resourceName}");
     }
 
     private static void TryDeleteFile(string? path)
