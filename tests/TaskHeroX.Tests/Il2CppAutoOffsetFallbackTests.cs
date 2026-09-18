@@ -5,21 +5,86 @@ namespace TaskHeroX.Tests;
 public sealed class Il2CppAutoOffsetFallbackTests
 {
     [Fact]
-    public void BundledDumperResources_AreEmbedded()
+    public void BundledDumperPackage_IsEmbeddedAndSelfContained()
     {
-        var assembly = typeof(Il2CppAutoOffsetFallback).Assembly;
-        string[] resources = assembly.GetManifestResourceNames();
+        string dir = Path.Combine(
+            Path.GetTempPath(),
+            "TaskHeroX-bundled-dumper-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
 
-        Assert.Contains("TaskHeroX.Core.Tools.Il2CppDumper.exe", resources);
-        Assert.Contains("TaskHeroX.Core.Tools.Il2CppDumper.config.json", resources);
+        try
+        {
+            string exe = Il2CppBundledDumperPackage.Materialize(dir);
+            string config = Path.Combine(dir, "config.json");
 
-        using Stream exe = Assert.IsAssignableFrom<Stream>(
-            assembly.GetManifestResourceStream("TaskHeroX.Core.Tools.Il2CppDumper.exe"));
-        using Stream config = Assert.IsAssignableFrom<Stream>(
-            assembly.GetManifestResourceStream("TaskHeroX.Core.Tools.Il2CppDumper.config.json"));
+            Assert.True(File.Exists(exe));
+            Assert.True(File.Exists(config));
 
-        Assert.True(exe.Length > 0);
-        Assert.True(config.Length > 0);
+            bool runtimeBundled =
+                new FileInfo(exe).Length >= 5_000_000 ||
+                File.Exists(Path.Combine(dir, "coreclr.dll")) ||
+                File.Exists(Path.Combine(dir, "hostfxr.dll"));
+
+            Assert.True(runtimeBundled, "bundled Il2CppDumper must carry its own runtime");
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task BundledDumper_StartsWithoutGlobalDotNetRuntime()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string dir = Path.Combine(
+            Path.GetTempPath(),
+            "TaskHeroX-bundled-dumper-start-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+
+        try
+        {
+            string exe = Il2CppBundledDumperPackage.Materialize(dir);
+            string fakeDotnet = Path.Combine(dir, "no-global-dotnet");
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = exe,
+                WorkingDirectory = dir,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            psi.Environment["DOTNET_ROOT"] = fakeDotnet;
+            psi.Environment["DOTNET_ROOT_X64"] = fakeDotnet;
+            psi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
+            psi.ArgumentList.Add("--help");
+
+            using var process = new System.Diagnostics.Process { StartInfo = psi };
+            Assert.True(process.Start());
+
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.WaitForExitAsync(cts.Token);
+
+            string stdout = await stdoutTask;
+            string stderr = await stderrTask;
+            string combined = stdout + Environment.NewLine + stderr;
+
+            Assert.Equal(0, process.ExitCode);
+            Assert.Contains("usage:", combined, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("You must install or update .NET", combined, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Microsoft.NETCore.App", combined, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 
     [Fact]
