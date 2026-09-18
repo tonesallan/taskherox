@@ -76,6 +76,22 @@ public class CoreTests
     }
 
     [Fact]
+    public void SymbolTable_RequireVersion_RejectsPreCubeLayoutV8Cache()
+    {
+        using var oldCache = new MemoryStream(
+            Encoding.UTF8.GetBytes("""{"_ver":8,"gra":123}"""));
+        using var currentCache = new MemoryStream(
+            Encoding.UTF8.GetBytes($"""{"_ver":{{SymbolTable.MinExtractVer}},"gra":123}"""));
+
+        var oldTable = new SymbolTable();
+        var currentTable = new SymbolTable();
+
+        Assert.False(oldTable.LoadOffsetsJson(oldCache, requireVersion: true));
+        Assert.True(currentTable.LoadOffsetsJson(currentCache, requireVersion: true));
+        Assert.Equal(9, SymbolTable.MinExtractVer);
+    }
+
+    [Fact]
     public void AutoUpdate_TryParseSha256_AcceptsStandardSidecar()
     {
         const string hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
