@@ -29,11 +29,6 @@ public static class Il2CppOffsetParityComparer
         "bal_ti", "stage_off", "jgk", "jgq", "jgd",
     ];
 
-    private static readonly (string Generated, string Expected)[] MigratedNumericKeys =
-    [
-        ("jgc_type13", "jgc"),
-    ];
-
     public static Il2CppOffsetParityReport Compare(
         Il2CppExtractedOffsets generated,
         string expectedCacheJson)
@@ -51,8 +46,16 @@ public static class Il2CppOffsetParityComparer
         foreach (string key in NumericKeys)
             CompareNumeric(generated, root, key, key, requiredExpected: true, mismatches);
 
-        foreach ((string generatedKey, string expectedKey) in MigratedNumericKeys)
-            CompareNumeric(generated, root, generatedKey, expectedKey, requiredExpected: true, mismatches);
+        // Caches historicos antigos usam "jgc"; o extrator Python mais recente ja usa
+        // "jgc_type13"/"jgc_type2". Aceita ambos como referencia sem jamais reintroduzir
+        // o simbolo generico no resultado C#.
+        if (HasNonNullProperty(root, "jgc_type13"))
+            CompareNumeric(generated, root, "jgc_type13", "jgc_type13", requiredExpected: true, mismatches);
+        else
+            CompareNumeric(generated, root, "jgc_type13", "jgc", requiredExpected: true, mismatches);
+
+        if (HasNonNullProperty(root, "jgc_type2"))
+            CompareNumeric(generated, root, "jgc_type2", "jgc_type2", requiredExpected: true, mismatches);
 
         CompareString(generated.InvClass, root, "inv_class", mismatches);
         CompareString(generated.RaClass, root, "ra_class", mismatches);
