@@ -24,14 +24,17 @@ public sealed class AutoFuse(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
     private readonly Dictionary<int, (int Type, int Grade, int Synth, int Level)?> _itemInfo = new();
     private readonly Dictionary<int, long> _block = new();   // anti-livelock por tipo (tick de expiração)
 
-    // offsets (do sym, com defaults do build c824)
-    private long OGrade => _sym.Get("cube_grade", 0xC8);
-    private long OBers => _sym.Get("cube_bers", 0xE0);
-    private long OInlist => _sym.Get("cube_inlist", 0x100);
-    private long OActive => _sym.Get("cube_active", 0x140);
-    private long OBusy => _sym.Get("cube_busy", 0x150);
-    private long OCubeType => _sym.Get("cube_type", 0x254);
-    private long OLvRecipe => _sym.Get("cube_lvrecipe", 0x258);
+    // Layout do Cube e write-sensitive: nunca usar defaults de outra build.
+    private long OGrade => _sym.Get("cube_grade");
+    private long OBers => _sym.Get("cube_bers");
+    private long OInlist => _sym.Get("cube_inlist");
+    private long OActive => _sym.Get("cube_active");
+    private long OBusy => _sym.Get("cube_busy");
+    private long OCubeType => _sym.Get("cube_type");
+    private long OLvRecipe => _sym.Get("cube_lvrecipe");
+    private bool HasCubeLayout =>
+        OGrade != 0 && OBers != 0 && OInlist != 0 && OActive != 0 &&
+        OBusy != 0 && OCubeType != 0 && OLvRecipe != 0;
     private long OItType => _sym.Get("iteminfo_type", 0x34);
     private long OItGrade => _sym.Get("iteminfo_grade", 0x38);
     private long OItSynth => _sym.Get("iteminfo_synth", 0x48);
@@ -222,7 +225,8 @@ public sealed class AutoFuse(MemoryAccess mem, SymbolTable sym, Il2CppResolver r
     /// <summary>UMA fusão (o loop re-chama). True se fundiu. CONSOME 9 itens -> 1.</summary>
     public bool DoSynth(Func<bool> keepGoing)
     {
-        if (_sym.Get("ilo") == 0 || _sym.Get("imx") == 0 || _sym.Get("eby") == 0 || _sym.Get("uimgr_ti") == 0)
+        if (_sym.Get("ilo") == 0 || _sym.Get("imx") == 0 || _sym.Get("eby") == 0 ||
+            _sym.Get("uimgr_ti") == 0 || !HasCubeLayout)
             return false;
         var counts = SynthFuseable();
         long now = Environment.TickCount64;
