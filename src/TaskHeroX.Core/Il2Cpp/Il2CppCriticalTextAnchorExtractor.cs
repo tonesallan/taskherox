@@ -157,18 +157,20 @@ public static class Il2CppCriticalTextAnchorExtractor
         }
         string recipeType = recipeTypes[0];
 
-        if (!PickCube(cube, parsed => parsed.IsStatic && parsed.ReturnType == "void" &&
-                                   parsed.ParameterTypes.SequenceEqual(["EItemSynthesisType"]), "ilo", result, out error) ||
-            !PickCube(cube, parsed => parsed.IsStatic && parsed.ReturnType == "bool" &&
-                                   parsed.ParameterTypes.SequenceEqual(["EGradeType"]), "ili", result, out error) ||
-            !PickCube(cube, parsed => parsed.IsStatic && parsed.ReturnType == "void" &&
-                                   parsed.ParameterTypes.SequenceEqual([recipeType]), "inf", result, out error) ||
-            !PickCube(cube, parsed => parsed.IsStatic && parsed.ReturnType == "bool" &&
-                                   parsed.ParameterTypes.SequenceEqual([recipeType]), "ima", result, out error) ||
-            !PickCube(cube, parsed => parsed.IsStatic && parsed.ReturnType == "void" &&
-                                   parsed.ParameterTypes.SequenceEqual(["int", "CubeInData"]), "iog", result, out error) ||
-            !PickCube(cube, parsed => parsed.IsStatic && parsed.ReturnType == "EAddCubeResult" &&
-                                   parsed.ParameterTypes.SequenceEqual(["ESlotType", "int"]), "ioa", result, out error))
+        // O Python legado usa re.search() dentro do segmento da classe Cube: ele escolhe o
+        // PRIMEIRO metodo que casa com cada assinatura, preservando tambem a visibilidade.
+        if (!PickFirstCube(cube, "public", parsed => parsed.IsStatic && parsed.ReturnType == "void" &&
+                                        parsed.ParameterTypes.SequenceEqual(["EItemSynthesisType"]), "ilo", result, out error) ||
+            !PickFirstCube(cube, "public", parsed => parsed.IsStatic && parsed.ReturnType == "bool" &&
+                                        parsed.ParameterTypes.SequenceEqual(["EGradeType"]), "ili", result, out error) ||
+            !PickFirstCube(cube, "private", parsed => parsed.IsStatic && parsed.ReturnType == "void" &&
+                                         parsed.ParameterTypes.SequenceEqual([recipeType]), "inf", result, out error) ||
+            !PickFirstCube(cube, "public", parsed => parsed.IsStatic && parsed.ReturnType == "bool" &&
+                                        parsed.ParameterTypes.SequenceEqual([recipeType]), "ima", result, out error) ||
+            !PickFirstCube(cube, "private", parsed => parsed.IsStatic && parsed.ReturnType == "void" &&
+                                         parsed.ParameterTypes.SequenceEqual(["int", "CubeInData"]), "iog", result, out error) ||
+            !PickFirstCube(cube, "public", parsed => parsed.IsStatic && parsed.ReturnType == "EAddCubeResult" &&
+                                        parsed.ParameterTypes.SequenceEqual(["ESlotType", "int"]), "ioa", result, out error))
         {
             anchors = null;
             return false;
@@ -208,24 +210,29 @@ public static class Il2CppCriticalTextAnchorExtractor
         return true;
     }
 
-    private static bool PickCube(
+    private static bool PickFirstCube(
         Il2CppDumpClass cube,
+        string visibility,
         Func<Il2CppMethodSignatureInfo, bool> predicate,
         string symbol,
         Il2CppCriticalTextAnchors result,
         out string? error)
     {
-        Il2CppDumpMethod[] matches = cube.Methods
-            .Where(method => Parse(method.Signature) is Il2CppMethodSignatureInfo parsed && predicate(parsed))
-            .ToArray();
-        if (matches.Length != 1)
+        foreach (Il2CppDumpMethod method in cube.Methods)
         {
-            error = $"{symbol} anchor ambiguous ({matches.Length})";
-            return false;
+            if (!string.Equals(method.Visibility, visibility, StringComparison.Ordinal))
+                continue;
+
+            if (Parse(method.Signature) is Il2CppMethodSignatureInfo parsed && predicate(parsed))
+            {
+                result.Symbols[symbol] = method.Rva;
+                error = null;
+                return true;
+            }
         }
-        result.Symbols[symbol] = matches[0].Rva;
-        error = null;
-        return true;
+
+        error = $"{symbol} anchor missing";
+        return false;
     }
 
     private static bool TryUniqueMethod(
