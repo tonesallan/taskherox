@@ -100,6 +100,55 @@ public class mover : singleton<mover>
     public MoveResult move(MoveRequest a, Action<MoveResult> b) { }
 }
 
+
+public class InjectionDetector
+{
+    // RVA: 0x2600
+    public InjectionDetector() { }
+    // RVA: 0x2700
+    public override void Dispose() { }
+    // RVA: 0x2800
+    public T Get<T>() { }
+    // RVA: 0x2900
+    public static InjectionDetector Instance() { }
+    // RVA: 0x2A00
+    public static void A() { }
+    // RVA: 0x2B00
+    public static void B(Action<string> callback) { }
+    // RVA: 0x2C00
+    public static void C() { }
+    // RVA: 0x2D00
+    public static void D() { }
+}
+
+public class UIManager
+{
+    public UI_Main ui_main; // 0xA8
+    // RVA: 0x3000
+    public void ClosePanel() { }
+    // RVA: 0x3100
+    public void Other() { }
+}
+
+public class UI_Main
+{
+    public Button button_Cube; // 0x88
+    // RVA: 0x2E00
+    private void Awake() { }
+}
+
+public class GuidingCube
+{
+    // RVA: 0x3200
+    public void Step() { }
+}
+
+public class CubeButtonHandler
+{
+    // RVA: 0x2F00
+    public static void Open(UI_Main ui) { }
+}
+
 public static class uw.Cube
 {
     public static Dictionary<ERecipeType, List<uw>> recipes; // 0x20
@@ -133,7 +182,11 @@ public static class uw.Cube
     { "Name": "BalanceRoot_TypeInfo", "Address": "0x7100" },
     { "Name": "holder<BalanceRoot>_TypeInfo", "Address": "0x7200" },
     { "Name": "box_TypeInfo", "Address": "0x7300" },
-    { "Name": "root<box>_TypeInfo", "Address": "0x7400" }
+    { "Name": "root<box>_TypeInfo", "Address": "0x7400" },
+    { "Name": "holder<UIManager>_TypeInfo", "Address": "0x7500" }
+  ],
+  "ScriptMetadataMethod": [
+    { "Address": "0x3800", "MethodAddress": "0x2F00" }
   ]
 }
 """;
@@ -148,6 +201,11 @@ public static class uw.Cube
             [0x1500] = [0x83, 0xF8, 0x02, 0xC3],
             [0x1900] = BuildLlx(0x1900, 0x2500),
             [0x2400] = [0x89,0x48,0x60, 0x48,0x89,0x48,0x20, 0x89,0x48,0x70, 0xC3],
+            [0x2E00] = BuildUiAwake(0x2E00, 0x88, 0x3800),
+            [0x2F00] = [0xC3],
+            [0x3000] = [0xC3],
+            [0x3100] = [0xC3],
+            [0x3200] = BuildCalls(0x3200, 0x3000),
         };
 
         bool ok = Il2CppFoundationExtractor.TryExtract(
@@ -197,6 +255,11 @@ public static class uw.Cube
         Assert.Equal(0x1500L, offsets.Symbols["jgc_type2"]);
         Assert.Equal(0x10L, offsets.Symbols["psd_common_off"]);
         Assert.Equal(0x64L, offsets.Symbols["commonsave_curstage"]);
+        Assert.Equal(0x7500L, offsets.Symbols["uimgr_ti"]);
+        Assert.Equal(0xA8L, offsets.Symbols["uimain"]);
+        Assert.Equal(0x2F00L, offsets.Symbols["eby"]);
+        Assert.Equal(0x3000L, offsets.Symbols["hgr"]);
+        Assert.Equal([0x2D00L], offsets.Ynj);
 
         Assert.True(Il2CppOffsetCache.TryValidate(offsets, out string? validationError), validationError);
     }
@@ -212,6 +275,21 @@ public static class uw.Cube
             bytes.AddRange(BitConverter.GetBytes(relative));
             ip += 5;
         }
+        bytes.Add(0xC3);
+        return [.. bytes];
+    }
+
+    private static byte[] BuildUiAwake(long startRva, int buttonOffset, long metadataSlot)
+    {
+        var bytes = new List<byte>
+        {
+            0x48, 0x8B, 0x81,
+        };
+        bytes.AddRange(BitConverter.GetBytes(buttonOffset));
+        bytes.AddRange([0x4C, 0x8B, 0x05]);
+        long ripAfterSecondMov = startRva + bytes.Count + 4;
+        int relative = checked((int)(metadataSlot - ripAfterSecondMov));
+        bytes.AddRange(BitConverter.GetBytes(relative));
         bytes.Add(0xC3);
         return [.. bytes];
     }
@@ -232,7 +310,7 @@ public static class uw.Cube
         const int optionalHeaderSize = 0xF0;
         const int sectionTable = peOffset + 24 + optionalHeaderSize;
         const int rawOffset = 0x200;
-        const int rawSize = 0x2000;
+        const int rawSize = 0x4000;
         const uint virtualAddress = 0x1000;
 
         var data = new byte[rawOffset + rawSize];
