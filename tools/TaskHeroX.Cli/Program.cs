@@ -15,6 +15,96 @@ if (args.Length >= 2 && args[0] == "--verify-offsets")
     return;
 }
 
+// Smoke read-only do MESMO caminho de recuperação usado pelo aplicativo:
+// Attach -> known/cache/embedded já tentados -> feed -> fallback C# -> LoadOffsetsFrom.
+// O cache pode ser direcionado para TEMP para não tocar o cache normal do app.
+// Uso: --recover-unknown-build [output.json]
+if (args.Length >= 1 && args[0] == "--recover-unknown-build")
+{
+    using var recovery = new TaskHeroX.Core.Engine();
+    recovery.Log += m => Console.WriteLine("  [engine] " + m);
+
+    if (!recovery.Attach())
+    {
+        Console.WriteLine("[FAIL] jogo nao esta aberto");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    string? hash = recovery.BuildHash;
+    Console.WriteLine($"pid={recovery.Target.ProcessId}");
+    Console.WriteLine($"build={hash ?? "?"}");
+    Console.WriteLine($"offsets antes={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "—"}");
+
+    if (string.IsNullOrWhiteSpace(hash))
+    {
+        Console.WriteLine("[FAIL] build hash indisponivel");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (recovery.OffsetsLoaded)
+    {
+        Console.WriteLine("[FAIL] este build ja foi resolvido antes do recovery; teste de build desconhecido ficou inconclusivo");
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    string output = args.Length >= 2
+        ? Path.GetFullPath(args[1])
+        : Path.Combine(Path.GetTempPath(), $"TaskHeroX-offsets-{hash}-engine-recovery.json");
+
+    if (File.Exists(output))
+        File.Delete(output);
+
+    Console.WriteLine($"cache de teste={output}");
+    Console.WriteLine("[1/2] executando Engine.RecoverUnknownBuildOffsetsAsync...");
+
+    bool recovered = await recovery.RecoverUnknownBuildOffsetsAsync(
+        cachePathOverride: output);
+
+    Console.WriteLine($"[2/2] recovered={recovered} offsets={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "—"}");
+
+    if (!recovered || !recovery.OffsetsLoaded)
+    {
+        Console.WriteLine("[FAIL] Engine nao recuperou offsets");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (!string.Equals(recovery.OffsetsSource, "auto-extração C#", StringComparison.Ordinal))
+    {
+        Console.WriteLine($"[FAIL] fonte inesperada: {recovery.OffsetsSource ?? "—"}");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (!File.Exists(output))
+    {
+        Console.WriteLine("[FAIL] fallback nao persistiu o cache de teste");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (recovery.Symbols.Has("jgc"))
+    {
+        Console.WriteLine("[FAIL] generic jgc carregado");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine($"  gra        0x{recovery.Symbols.Get("gra"):X}");
+    Console.WriteLine($"  upd        0x{recovery.Symbols.Get("upd"):X}");
+    Console.WriteLine($"  iw         0x{recovery.Symbols.Get("iw"):X}");
+    Console.WriteLine($"  uo_max     0x{recovery.Symbols.Get("uo_max"):X}");
+    Console.WriteLine($"  uo_cur     0x{recovery.Symbols.Get("uo_cur"):X}");
+    Console.WriteLine($"  uo_wave    0x{recovery.Symbols.Get("uo_wave"):X}");
+    Console.WriteLine($"  generic jgc? {recovery.Symbols.Has("jgc")}");
+    Console.WriteLine($"  jogo vivo? {recovery.Target.IsAlive()}");
+    Console.WriteLine("[PASS] Engine unknown-build recovery concluido");
+    return;
+}
+
 // Smoke do fallback que o app usa para build desconhecido: usa o Il2CppDumper EMBUTIDO no Core,
 // revalida o hash antes/depois da extração e só persiste um cache aceito pelo SymbolTable.
 // Uso: --auto-offset-fallback <GameAssembly.dll> [output.json]
