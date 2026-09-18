@@ -66,6 +66,23 @@ public static class Il2CppFoundationExtractor
         foreach ((string key, long value) in Il2CppDataFieldExtractor.Extract(classes))
             result.Symbols[key] = value;
 
+        if (!Il2CppCubeLayoutExtractor.TryExtract(
+                classes, out Il2CppCubeLayoutSymbols? cubeLayout, out error) || cubeLayout is null)
+        {
+            offsets = null;
+            return false;
+        }
+        result.Symbols["cube_grade"] = cubeLayout.Grade;
+        result.Symbols["cube_bers"] = cubeLayout.RecipeLists;
+        result.Symbols["cube_inlist"] = cubeLayout.InputList;
+        result.Symbols["cube_active"] = cubeLayout.ActiveRecipe;
+        result.Symbols["cube_busy"] = cubeLayout.Busy;
+        result.Symbols["cube_type"] = cubeLayout.SynthesisType;
+        result.Symbols["cube_lvrecipe"] = cubeLayout.LevelRecipe;
+        result.Symbols["cube_level_off"] = cubeLayout.CubeLevel;
+        foreach ((string key, long value) in cubeLayout.OptionalSymbols)
+            result.Symbols[key] = value;
+
         if (!Il2CppRuntimeRequiredAnchorExtractor.TryExtract(
                 classes, script, image,
                 out Il2CppRuntimeRequiredAnchors? runtimeRequired, out error) || runtimeRequired is null)
