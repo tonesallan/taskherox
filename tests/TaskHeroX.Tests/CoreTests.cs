@@ -81,7 +81,8 @@ public class CoreTests
         using var oldCache = new MemoryStream(
             Encoding.UTF8.GetBytes("""{"_ver":8,"gra":123}"""));
         using var currentCache = new MemoryStream(
-            Encoding.UTF8.GetBytes($"""{"_ver":{{SymbolTable.MinExtractVer}},"gra":123}"""));
+            Encoding.UTF8.GetBytes(
+                "{\"_ver\":" + SymbolTable.MinExtractVer + ",\"gra\":123}"));
 
         var oldTable = new SymbolTable();
         var currentTable = new SymbolTable();
