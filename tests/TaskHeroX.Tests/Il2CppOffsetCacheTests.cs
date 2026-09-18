@@ -80,7 +80,7 @@ public sealed class Il2CppOffsetCacheTests
         using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(first));
         Assert.True(table.LoadOffsetsJson(stream, requireVersion: true));
         Assert.Equal(11, table.Get("a_extra"));
-        Assert.Equal([0x1000L, 0x2000L], table.Ynj);
+        Assert.Equal([0x1234L, 0x1000L, 0x2000L], table.Ynj);
         Assert.Equal("InventoryConcrete", table.InvClass);
         Assert.Equal("MoveItemsManager", table.RaClass);
     }
