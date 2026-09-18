@@ -1083,7 +1083,7 @@ def _data_anchors(ddir):
 # e nao estiverem aqui, o auto-fuse so nao AUTO-ABRE o cubo (degradacao graciosa) — o resto auto-resolve.
 _KNOWN_UI_HANDLERS={"c824ed7a2bb1":{"eby":0x839BB0,"hgr":0xC362A0}}
 
-_EXTRACT_VER=8   # BUMPAR sempre que a extracao mudar: invalida os caches antigos. Sem isso um offset
+_EXTRACT_VER=9   # BUMPAR sempre que a extracao mudar: invalida os caches antigos. Sem isso um offset
                  # errado fica gravado no disco e o fix nao chega em quem ja rodou o painel.
 _CRIT_SYMS=("gra","upd","llx","iw","ra_class","ilo","ipu","imx","inf","ili","iog","ioa","ima","iuw","izb","inv_slots_off","stash_off")
 def _offsets_ok(got):
