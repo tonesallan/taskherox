@@ -12,15 +12,52 @@
     <PackageReference Include="Iced" Version="1.21.0" />
   </ItemGroup>
 
-  <!-- Cache de offsets por build (o que o engine Python resolveu) EMBUTIDO no assembly -> 1 exe de verdade.
-       O Engine.Attach carrega offsets_<hash>.json embutido quando o build não está no KnownBuilds. -->
+  <!-- Cache de offsets por build embutido no assembly. -->
   <ItemGroup>
     <EmbeddedResource Include="Offsets\*.json" />
     <EmbeddedResource Include="Data\item_prices.json" />
-    <EmbeddedResource Include="..\..\python_old_project\tools\Il2CppDumper\Il2CppDumper.exe"
-                      LogicalName="TaskHeroX.Core.Tools.Il2CppDumper.exe" />
-    <EmbeddedResource Include="..\..\python_old_project\tools\Il2CppDumper\config.json"
-                      LogicalName="TaskHeroX.Core.Tools.Il2CppDumper.config.json" />
   </ItemGroup>
+
+  <!--
+    O fallback de build desconhecido precisa funcionar no release self-contained mesmo quando a
+    máquina NÃO possui .NET 6/8 instalado. O executável legado pequeno do repositório é
+    framework-dependent; por isso o build baixa a variante Windows self-contained oficial e fixa
+    do Il2CppDumper, extrai no obj/ e embute TODOS os arquivos do pacote no Core.
+    A URL é versionada (não "latest"), mantendo o artefato reprodutível.
+  -->
+  <PropertyGroup>
+    <Il2CppDumperVersion>6.7.46</Il2CppDumperVersion>
+    <Il2CppDumperArchiveName>Il2CppDumper-win-v$(Il2CppDumperVersion).zip</Il2CppDumperArchiveName>
+    <Il2CppDumperPackageRoot>$(BaseIntermediateOutputPath)il2cppdumper\$(Il2CppDumperVersion)</Il2CppDumperPackageRoot>
+    <Il2CppDumperArchive>$(Il2CppDumperPackageRoot)\$(Il2CppDumperArchiveName)</Il2CppDumperArchive>
+    <Il2CppDumperExtractDir>$(Il2CppDumperPackageRoot)\package</Il2CppDumperExtractDir>
+    <Il2CppDumperUrl>https://github.com/Perfare/Il2CppDumper/releases/download/v$(Il2CppDumperVersion)/$(Il2CppDumperArchiveName)</Il2CppDumperUrl>
+  </PropertyGroup>
+
+  <Target Name="PrepareBundledIl2CppDumper" BeforeTargets="PrepareForBuild">
+    <MakeDir Directories="$(Il2CppDumperPackageRoot)" />
+    <DownloadFile
+      SourceUrl="$(Il2CppDumperUrl)"
+      DestinationFolder="$(Il2CppDumperPackageRoot)"
+      DestinationFileName="$(Il2CppDumperArchiveName)"
+      SkipUnchangedFiles="true"
+      Condition="!Exists('$(Il2CppDumperArchive)')" />
+    <MakeDir Directories="$(Il2CppDumperExtractDir)" />
+    <Unzip
+      SourceFiles="$(Il2CppDumperArchive)"
+      DestinationFolder="$(Il2CppDumperExtractDir)"
+      SkipUnchangedFiles="true" />
+
+    <ItemGroup>
+      <_Il2CppDumperPackageFiles Include="$(Il2CppDumperExtractDir)\**\*" />
+      <EmbeddedResource
+        Include="@(_Il2CppDumperPackageFiles)"
+        LogicalName="TaskHeroX.Core.Tools.Il2CppDumperPackage.%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <Error
+      Condition="'@(_Il2CppDumperPackageFiles)' == ''"
+      Text="Il2CppDumper self-contained package is empty." />
+  </Target>
 
 </Project>
