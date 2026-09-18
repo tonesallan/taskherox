@@ -62,12 +62,14 @@ public sealed class Il2CppAutoOffsetPipelineTests
         {
             "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa", "ima",
             "iuw", "izb", "inv_slots_off", "stash_off",
+            "uimgr_ti", "uimain", "eby",
         })
         {
             offsets.Symbols[key] = 1;
         }
 
         offsets.Symbols["inv_klass_ti"] = 2;
+        offsets.Ynj.Add(0x1234);
         return offsets;
     }
 }
