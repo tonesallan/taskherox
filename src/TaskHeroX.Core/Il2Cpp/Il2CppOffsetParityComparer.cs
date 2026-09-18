@@ -27,6 +27,7 @@ public static class Il2CppOffsetParityComparer
         "iuw", "izb", "inv_slots_off", "stash_off", "inv_psd_off", "inv_list_off",
         "uo_ti", "uo_dict", "uo_cur_cache", "uo_max", "uo_cur", "uo_wave",
         "bal_ti", "stage_off", "jgk", "jgq", "jgd",
+        "uimgr_ti", "uimain", "eby",
     ];
 
     public static Il2CppOffsetParityReport Compare(
@@ -62,6 +63,10 @@ public static class Il2CppOffsetParityComparer
 
         CompareString(generated.InvClass, root, "inv_class", mismatches);
         CompareString(generated.RaClass, root, "ra_class", mismatches);
+        CompareYnj(generated, root, mismatches);
+
+        if (HasNonNullProperty(root, "hgr"))
+            CompareNumeric(generated, root, "hgr", "hgr", requiredExpected: false, mismatches);
 
         // O singleton pode ser representado por uma das duas rotas. Compara somente a rota presente
         // no cache histórico, sem exigir que ambas existam simultaneamente.
@@ -71,6 +76,36 @@ public static class Il2CppOffsetParityComparer
             CompareNumeric(generated, root, "bau_ti", "bau_ti", true, mismatches);
 
         return new Il2CppOffsetParityReport(mismatches);
+    }
+
+    private static void CompareYnj(
+        Il2CppExtractedOffsets generated,
+        JsonElement expectedRoot,
+        List<Il2CppOffsetParityMismatch> mismatches)
+    {
+        if (!expectedRoot.TryGetProperty("ynj", out JsonElement expected) ||
+            expected.ValueKind != JsonValueKind.Array)
+        {
+            mismatches.Add(new Il2CppOffsetParityMismatch(
+                "ynj", "ynj",
+                string.Join(",", generated.Ynj),
+                null));
+            return;
+        }
+
+        long[] expectedValues = expected.EnumerateArray()
+            .Where(item => item.ValueKind == JsonValueKind.Number && item.TryGetInt64(out _))
+            .Select(item => item.GetInt64())
+            .ToArray();
+        long[] generatedValues = [.. generated.Ynj];
+
+        if (!generatedValues.SequenceEqual(expectedValues))
+        {
+            mismatches.Add(new Il2CppOffsetParityMismatch(
+                "ynj", "ynj",
+                string.Join(",", generatedValues),
+                string.Join(",", expectedValues)));
+        }
     }
 
     private static void CompareNumeric(
