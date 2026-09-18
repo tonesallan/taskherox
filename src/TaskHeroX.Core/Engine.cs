@@ -34,6 +34,7 @@ public sealed class Engine : IDisposable
     /// <summary>Hash do build (md5 dos 2MB do GameAssembly.dll) e se os offsets resolveram â€” pro status da UI.</summary>
     public string? BuildHash { get; private set; }
     public bool OffsetsLoaded { get; private set; }
+    public string? OffsetsSource { get; private set; }
 
     // Flags de intenÃ§Ã£o â€” o AutomationLoop lÃª a cada tick.
     public bool WantActk, WantGodmode, WantAutobox, WantAutostash, WantAutofuse, WantAutoboss, WantEvolve;
@@ -61,12 +62,14 @@ public sealed class Engine : IDisposable
 
         var hash = BuildInfo.DllHash(Target.ModulePath);
         BuildHash = hash;
+        OffsetsSource = null;
         bool loaded = false;
         if (hash is null)
             Emit("build-hash indisponÃ­vel (nÃ£o consegui ler o GameAssembly.dll do disco)");
         else
         {
             loaded = Symbols.LoadKnownBuild(hash);
+            if (loaded) OffsetsSource = "known-build";
             if (!loaded)
             {
                 // Fallback: cache de offsets no formato do Python (offsets_<hash>.json), ao lado do exe.
@@ -82,6 +85,7 @@ public sealed class Engine : IDisposable
                     if (Symbols.LoadOffsetsJson(cand, requireVersion: true))
                     {
                         loaded = true;
+                        OffsetsSource = "cache local";
                         Emit($"offsets carregados do cache {Path.GetFileName(cand)}");
                         break;
                     }
@@ -99,6 +103,7 @@ public sealed class Engine : IDisposable
                     if (s is not null && Symbols.LoadOffsetsJson(s))
                     {
                         loaded = true;
+                        OffsetsSource = "cache embutido";
                         Emit($"offsets embutidos ({hash})");
                     }
                 }
@@ -144,9 +149,77 @@ public sealed class Engine : IDisposable
     {
         if (Symbols is null || !Symbols.LoadOffsetsJson(path, requireVersion: true)) return false;
         OffsetsLoaded = true;
+        OffsetsSource = source;
         Emit($"offsets do build {BuildHash} carregados de {source} â€” features completas de volta");
         return true;
     }
+
+    /// <summary>
+    /// Recupera um build desconhecido sem alterar a ordem das fontes: o Attach ja tentou known-build,
+    /// cache local e cache embutido; aqui tentamos feed publicado e, somente se ele nao resolver,
+    /// o auto-offset C# local. O cache gerado so e carregado se a mesma sessao/build continuar viva.
+    /// </summary>
+    public async Task<bool> RecoverUnknownBuildOffsetsAsync(
+        string? cachePathOverride = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsAttached || !Target.IsAlive() || OffsetsLoaded)
+            return OffsetsLoaded;
+
+        string? hash = BuildHash;
+        if (string.IsNullOrWhiteSpace(hash) || string.IsNullOrWhiteSpace(Target.ModulePath))
+            return false;
+
+        string modulePath = Target.ModulePath;
+
+        string? feedPath = await Update.OffsetsFeed.TryFetchAsync(hash, cancellationToken)
+            .ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!SameAttachedBuild(hash, modulePath))
+            return false;
+
+        if (feedPath is not null && LoadOffsetsFrom(feedPath, source: "feed"))
+            return true;
+
+        Emit($"feed sem offsets para {hash[..Math.Min(7, hash.Length)]} â€” iniciando auto-extraÃ§Ã£o C# fail-closed");
+
+        string cachePath = cachePathOverride ?? Update.OffsetsFeed.CachePath(hash);
+        Il2CppAutoOffsetFallbackResult generated =
+            await Il2CppAutoOffsetFallback.TryGenerateAsync(
+                hash,
+                modulePath,
+                cachePath,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!generated.Success)
+        {
+            if (SameAttachedBuild(hash, modulePath))
+                Emit($"auto-offset C# nÃ£o aceitou o build {hash[..Math.Min(7, hash.Length)]}: {generated.Error ?? "falha desconhecida"}");
+            return false;
+        }
+
+        if (!SameAttachedBuild(hash, modulePath))
+            return false;
+
+        if (!LoadOffsetsFrom(generated.CachePath!, source: "auto-extraÃ§Ã£o C#"))
+        {
+            Emit("cache gerado pelo auto-offset C# foi rejeitado na carga final");
+            return false;
+        }
+
+        Emit($"auto-offset C# validado para {hash[..Math.Min(7, hash.Length)]}");
+        return true;
+    }
+
+    private bool SameAttachedBuild(string hash, string modulePath) =>
+        IsAttached &&
+        Target.IsAlive() &&
+        string.Equals(BuildHash, hash, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(Target.ModulePath, modulePath, StringComparison.OrdinalIgnoreCase);
 
     public void Dispose() => Target.Dispose();
 }
