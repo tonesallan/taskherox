@@ -9,16 +9,13 @@ Um `offsets_<hash>.json` por build do jogo. **É daqui que o painel se cura sozi
 Quando o jogo atualiza, todos os RVAs mudam e as features que dependem deles param (inventário, runas,
 stages, nível do cubo, ACTk). Reextrair exige o Il2CppDumper, que precisa de .NET 6 — quase ninguém tem.
 
-Com o feed, o painel instalado faz um GET de ~13 KB no start, acha o JSON do build novo e volta a
-funcionar **na mesma sessão** — sem baixar exe, sem reinstalar, sem ação do usuário. Se o build ainda
-não estiver publicado aqui (404), o painel segue em modo degradado (só cheats por AOB) e o banner explica.
+Com o feed, o painel instalado faz um GET do JSON do build novo e volta a funcionar **na mesma sessão**. Se o build ainda não estiver publicado aqui (404), o TaskHeroX agora tenta o **auto-offset C# local** como último fallback: usa o Il2CppDumper embutido, extrai/valida os símbolos, grava um cache v8 e o carrega sem reiniciar o painel. Se qualquer etapa falhar ou ficar ambígua, o fluxo é fail-closed e o painel permanece no modo degradado/AOB.
 
-Consumido por `src/TaskHeroX.Core/Update/OffsetsFeed.cs`; o painel grava o resultado em
-`<pasta do exe>/cache/offsets_<hash>.json`, que é o primeiro lugar que o `Engine.Attach` procura.
+Consumido por `src/TaskHeroX.Core/Update/OffsetsFeed.cs`. A ordem de resolução é: **KnownBuilds -> cache local versionado -> cache embutido -> feed -> auto-extração C#**. Tanto o feed quanto o fallback C# gravam em `<pasta do exe>/cache/offsets_<hash>.json`; no próximo start esse cache passa a ser encontrado antes das fontes remotas.
 
 ## Como publicar um build novo
 
-Com o jogo atualizado instalado (precisa do Il2CppDumper + .NET 6 — só de quem publica, não do usuário):
+Com o jogo atualizado instalado, ainda é possível publicar manualmente um cache pelo fluxo legado Python:
 
 ```bash
 cd python_old_project
@@ -41,8 +38,7 @@ dotnet run --project tools/TaskHeroX.Cli -- --feed <hash>      # baixa e valida
 dotnet run --project tools/TaskHeroX.Cli -- --e2e             # 19 checagens ao vivo
 ```
 
-O painel só aceita o JSON se ele carregar e tiver `gra` + `uo_ti` — download pela metade ou página de
-erro salva viraria um cache tóxico que nunca mais seria refeito.
+O feed só persiste o JSON se ele carregar com versão aceita e trouxer símbolos-chave. Já o fallback C# passa por uma validação mais rígida: contrato crítico completo, hash do `GameAssembly.dll` conferido antes/depois da extração, ausência de `jgc` genérico e recarga final pelo `SymbolTable(requireVersion: true)` antes de o cache ser usado.
 
 ## Builds publicados
 
@@ -54,3 +50,8 @@ erro salva viraria um cache tóxico que nunca mais seria refeito.
 | `a8b994ee3986` | 2026-07-30 | o `PlayerSaveData` deslocou muito (`RuneSaveData` 0x80→0x90, `itemSaveDatas` 0xb0→0xc0, …). Expôs **dois offsets ainda hardcoded**: o da lista de runas (escrevia em `attributeSaveDatas`, de layout idêntico — corrompia os atributos do herói) e o do nível do cubo (0x1CC→0x1D8, lia lixo). Os dois viraram auto-extraídos |
 | `9655ccb67d45` | 2026-07-31 | `cube_level_off` mudou **de novo** (0x1D8→0x1D0) e veio certo sozinho — a prova de que auto-extrair foi a decisão certa |
 | `d2651aeb57f0` | 2026-08-11 | extração limpa, todas as âncoras seguraram. `cube_level_off` seguiu 0x1D0 e o offset de runa 0x90. Validado ao vivo: dispatcher instala, estágio/cubo/runas leem certo, godmode resolve |
+
+
+## Auto-offset C# validado
+
+No build `7fc7437300cf`, o fluxo foi validado ao vivo com o feed sem arquivo correspondente: o `Engine` iniciou com `OffsetsLoaded=False`, tentou o feed, executou o fallback C#, persistiu cache `_ver=8`, carregou a `SymbolTable` e terminou com `OffsetsLoaded=True` / `OffsetsSource=auto-extract-csharp`. O processo do jogo permaneceu vivo e o working tree não foi alterado.
