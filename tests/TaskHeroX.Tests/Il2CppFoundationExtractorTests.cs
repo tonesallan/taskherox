@@ -162,6 +162,8 @@ public static class uw.Cube
     public static SynthesisRecipeInfoData recipe; // 0x260
     public static EItemSynthesisType synthesisType; // 0x274
     public static uw levelRecipe; // 0x278
+    // RVA: 0x1A80
+    public static void selectRecipe(ERecipeType a) { }
     // RVA: 0x1B00
     public static void setType(EItemSynthesisType a) { }
     // RVA: 0x1C00
@@ -281,7 +283,7 @@ public static class uw.Cube
         Assert.Equal(0x260L, offsets.Symbols["cube_recipe"]);
         Assert.Equal(0x108L, offsets.Symbols["cube_beru"]);
         Assert.Equal(0x20L, offsets.Symbols["cube_resultevt"]);
-        Assert.Equal(0x1B00L, offsets.Symbols["ilx"]);
+        Assert.Equal(0x1A80L, offsets.Symbols["ilx"]);
 
         Assert.True(Il2CppOffsetCache.TryValidate(offsets, out string? validationError), validationError);
     }
