@@ -56,6 +56,22 @@ public sealed class Il2CppOffsetParityComparerTests
     }
 
     [Fact]
+    public void Compare_AcceptsOlderHistoricalCacheWithoutStageValidator()
+    {
+        Il2CppExtractedOffsets generated = CreateExpectedOffsets();
+
+        string expected = BuildExpectedJson()
+            .Replace("\"jgc\":28,", string.Empty, StringComparison.Ordinal);
+
+        Il2CppOffsetParityReport report = Il2CppOffsetParityComparer.Compare(generated, expected);
+
+        Assert.True(report.IsMatch);
+        Assert.Empty(report.Mismatches);
+        Assert.Equal(28, generated.Symbols["jgc_type13"]);
+        Assert.DoesNotContain("jgc", generated.Symbols.Keys);
+    }
+
+    [Fact]
     public void Compare_UsesOnlyInventorySingletonRoutePresentInHistoricalCache()
     {
         Il2CppExtractedOffsets generated = CreateExpectedOffsets();
