@@ -194,6 +194,13 @@ public class CoreTests
         Assert.Contains("\"createdUtc\": \"2026-09-16T01:30:00+00:00\"", json);
     }
 
+    [Fact]
+    public void Engine_AutoExtractOffsetsSource_IsStableAsciiToken()
+    {
+        Assert.Equal("auto-extract-csharp", Engine.AutoExtractOffsetsSource);
+        Assert.All(Engine.AutoExtractOffsetsSource, ch => Assert.InRange((int)ch, 0, 127));
+    }
+
     private static void SetBackingField<TTarget, TValue>(TTarget target, string propertyName, TValue value)
         where TTarget : class
     {
