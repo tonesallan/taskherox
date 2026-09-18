@@ -113,7 +113,7 @@ public sealed class Engine : IDisposable
             // comparar duas sessÃµes mostra o problema na hora.
             Emit(loaded
                 ? $"build {hash} â€” offsets prontos (GameAssembly @ 0x{Target.ModuleBase:X})"
-                : $"build {hash} desconhecido e sem cache â€” sÃ³ reads por AOB (stats/stage/god) funcionam; auto-offset por dump = futuro");
+                : $"build {hash} desconhecido e sem cache â€” modo AOB temporÃ¡rio; tentando feed/auto-offset C# em background");
         }
 
         OffsetsLoaded = loaded;
