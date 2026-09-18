@@ -34,8 +34,9 @@ public sealed class Il2CppHistoricalCacheCompatibilityTests
 
         foreach (string hash in HistoricalHashes)
         {
-            string resource = Assert.Single(resources.Where(name =>
-                name.EndsWith($"offsets_{hash}.json", StringComparison.OrdinalIgnoreCase)));
+            string resource = Assert.Single(
+                resources,
+                name => name.EndsWith($"offsets_{hash}.json", StringComparison.OrdinalIgnoreCase));
 
             using Stream stream = Assert.IsAssignableFrom<Stream>(
                 assembly.GetManifestResourceStream(resource));
