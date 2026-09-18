@@ -48,11 +48,11 @@
       Files="$(Il2CppDumperArchive)"
       Algorithm="SHA256"
       HashEncoding="hex">
-      <Output TaskParameter="Items" ItemName="_Il2CppDumperArchiveWithHash" />
+      <Output TaskParameter="Hash" PropertyName="_Il2CppDumperArchiveActualSha256" />
     </GetFileHash>
     <Error
-      Condition="'%(_Il2CppDumperArchiveWithHash.FileHash)' != '$(Il2CppDumperArchiveSha256)'"
-      Text="Il2CppDumper archive SHA-256 mismatch. Expected $(Il2CppDumperArchiveSha256), got %(_Il2CppDumperArchiveWithHash.FileHash)." />
+      Condition="'$(_Il2CppDumperArchiveActualSha256)' != '$(Il2CppDumperArchiveSha256)'"
+      Text="Il2CppDumper archive SHA-256 mismatch. Expected $(Il2CppDumperArchiveSha256), got $(_Il2CppDumperArchiveActualSha256)." />
 
     <MakeDir Directories="$(Il2CppDumperExtractDir)" />
     <Unzip
