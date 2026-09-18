@@ -79,6 +79,7 @@ public static class Il2CppCriticalTextAnchorExtractor
             .SelectMany(klass => klass.Methods
                 .Select(method => (Class: klass, Method: method, Parsed: Parse(method.Signature)))
                 .Where(item => item.Parsed is not null &&
+                               string.Equals(item.Method.Visibility, "public", StringComparison.Ordinal) &&
                                !item.Parsed.IsStatic &&
                                item.Parsed.ParameterTypes.Count == 2 &&
                                item.Parsed.ParameterTypes[0] == "MoveRequest" &&
@@ -87,7 +88,12 @@ public static class Il2CppCriticalTextAnchorExtractor
         if (moveMatches.Length != 1)
         {
             anchors = null;
-            error = $"move-manager method ambiguous ({moveMatches.Length})";
+            string details = string.Join(
+                ", ",
+                moveMatches.Select(item =>
+                    $"{item.Class.Name}.{item.Parsed!.MethodName}@0x{item.Method.Rva:X}"));
+            error = $"move-manager method ambiguous ({moveMatches.Length})" +
+                    (details.Length > 0 ? $": {details}" : string.Empty);
             return false;
         }
 
