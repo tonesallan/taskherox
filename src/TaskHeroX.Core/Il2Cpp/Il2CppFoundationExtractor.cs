@@ -66,6 +66,20 @@ public static class Il2CppFoundationExtractor
         foreach ((string key, long value) in Il2CppDataFieldExtractor.Extract(classes))
             result.Symbols[key] = value;
 
+        if (!Il2CppRuntimeRequiredAnchorExtractor.TryExtract(
+                classes, script, image,
+                out Il2CppRuntimeRequiredAnchors? runtimeRequired, out error) || runtimeRequired is null)
+        {
+            offsets = null;
+            return false;
+        }
+        result.Symbols["uimgr_ti"] = runtimeRequired.UiManagerTypeInfo;
+        result.Symbols["uimain"] = runtimeRequired.UiMainOffset;
+        result.Symbols["eby"] = runtimeRequired.Eby;
+        if (runtimeRequired.Hgr is long hgr)
+            result.Symbols["hgr"] = hgr;
+        result.Ynj.AddRange(runtimeRequired.Ynj);
+
         if (!Il2CppCriticalTextAnchorExtractor.TryExtract(
                 classes, out Il2CppCriticalTextAnchors? critical, out error) || critical is null)
         {
