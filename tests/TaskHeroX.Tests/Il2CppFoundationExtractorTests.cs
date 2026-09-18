@@ -119,8 +119,9 @@ public static class uw.Cube
     public static void synthesize() { }
     // RVA: 0x2200
     private static InternalBucketCountResult bucketCount() { }
+    [AsyncStateMachine(typeof(uw.Cube.<TriggerCurrentRecipeLogic>d__42))]
     // RVA: 0x2300
-    public static Task TriggerCurrentRecipeLogic() { }
+    public static Task abc() { }
 }
 """;
 
