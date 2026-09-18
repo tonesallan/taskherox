@@ -5,7 +5,7 @@ tudo aqui estiver ✅ (ou conscientemente descartado).
 
 Legenda: ✅ feito · 🟡 parcial · ⏸ adiado (documentado) · ⚪ pendente
 
-> **Estado validado**: além da paridade histórica já registrada no build `c824ed7a2bb1`, o pipeline de **auto-offset C#** foi validado no build `7fc7437300cf`: extração real C# = Python legado nos símbolos críticos; fallback embutido gera cache v8; e o caminho `feed sem offsets -> auto-offset C# -> LoadOffsetsFrom -> OffsetsLoaded=True` foi exercitado ao vivo com o jogo permanecendo aberto.
+> **Estado validado**: além da paridade histórica já registrada no build `c824ed7a2bb1`, o pipeline de **auto-offset C#** foi validado no build `7fc7437300cf`: extração real C# = Python legado nos símbolos críticos; fallback embutido gera cache v9; e o caminho `feed sem offsets -> auto-offset C# -> LoadOffsetsFrom -> OffsetsLoaded=True` foi exercitado ao vivo com o jogo permanecendo aberto.
 
 ## Engine (núcleo)
 | Recurso | Python | C# | Nota |
