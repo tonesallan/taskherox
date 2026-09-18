@@ -24,6 +24,7 @@ public sealed class Il2CppHistoricalCacheCompatibilityTests
         "iuw", "izb", "inv_slots_off", "stash_off", "inv_psd_off", "inv_list_off",
         "uo_ti", "uo_dict", "uo_cur_cache", "uo_max", "uo_cur", "uo_wave",
         "bal_ti", "stage_off", "jgk", "jgq", "jgd",
+        "uimgr_ti", "uimain", "eby",
     ];
 
     [Fact]
@@ -86,6 +87,17 @@ public sealed class Il2CppHistoricalCacheCompatibilityTests
             if (root.TryGetProperty("jgc_type2", out JsonElement type2) &&
                 type2.ValueKind == JsonValueKind.Number)
                 generated.Symbols["jgc_type2"] = type2.GetInt64();
+
+            if (root.TryGetProperty("hgr", out JsonElement hgr) &&
+                hgr.ValueKind == JsonValueKind.Number)
+                generated.Symbols["hgr"] = hgr.GetInt64();
+
+            Assert.True(root.TryGetProperty("ynj", out JsonElement ynjElement));
+            Assert.Equal(JsonValueKind.Array, ynjElement.ValueKind);
+            generated.Ynj.AddRange(
+                ynjElement.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.Number)
+                    .Select(item => item.GetInt64()));
 
             Il2CppOffsetParityReport report = Il2CppOffsetParityComparer.Compare(generated, json);
 
