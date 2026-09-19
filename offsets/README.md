@@ -54,4 +54,4 @@ O feed só persiste o JSON se ele carregar com versão aceita e trouxer símbolo
 
 ## Auto-offset C# validado
 
-No build `7fc7437300cf`, o fluxo foi validado ao vivo com o feed sem arquivo correspondente: o `Engine` iniciou com `OffsetsLoaded=False`, tentou o feed, executou o fallback C#, persistiu cache `_ver=8`, carregou a `SymbolTable` e terminou com `OffsetsLoaded=True` / `OffsetsSource=auto-extract-csharp`. O processo do jogo permaneceu vivo e o working tree não foi alterado.
+No build `7fc7437300cf`, o fluxo foi validado ao vivo com o feed sem arquivo correspondente: o `Engine` iniciou com `OffsetsLoaded=False`, tentou o feed, executou o fallback C#, persistiu cache `_ver=9`, carregou a `SymbolTable` e terminou com `OffsetsLoaded=True` / `OffsetsSource=auto-extract-csharp`. O processo do jogo permaneceu vivo e o working tree não foi alterado.
