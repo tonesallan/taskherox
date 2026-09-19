@@ -53,6 +53,12 @@ public sealed class Il2CppHistoricalCacheCompatibilityTests
             using JsonDocument document = JsonDocument.Parse(json);
             JsonElement root = document.RootElement;
 
+            Assert.True(
+                root.TryGetProperty("cube_level_off", out JsonElement cubeLevelElement) &&
+                cubeLevelElement.ValueKind == JsonValueKind.Number &&
+                cubeLevelElement.GetInt64() > 0,
+                $"{hash}: missing explicit build-scoped cube_level_off");
+
             Assert.True(root.TryGetProperty("inv_slots_off", out JsonElement invElement));
             Assert.True(root.TryGetProperty("stash_off", out JsonElement stashElement));
             Assert.Equal(8, stashElement.GetInt64() - invElement.GetInt64());
