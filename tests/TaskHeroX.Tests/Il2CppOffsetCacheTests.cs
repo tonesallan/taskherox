@@ -67,6 +67,36 @@ public sealed class Il2CppOffsetCacheTests
     }
 
     [Fact]
+    public void TryValidateSerialized_UsesTheSameReadyContract()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        string ready = Il2CppOffsetCache.Serialize(offsets);
+
+        Assert.True(
+            Il2CppOffsetCache.TryValidateSerialized(System.Text.Encoding.UTF8.GetBytes(ready), out string? readyError),
+            readyError);
+
+        byte[] partial = System.Text.Encoding.UTF8.GetBytes(
+            $"{{\"_ver\":{SymbolTable.MinExtractVer},\"gra\":1}}");
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(partial, out string? partialError));
+        Assert.Equal("missing critical symbol: upd", partialError);
+
+        byte[] old = System.Text.Encoding.UTF8.GetBytes(ready.Replace(
+            $"\"_ver\":{SymbolTable.MinExtractVer}",
+            $"\"_ver\":{SymbolTable.MinExtractVer - 1}",
+            StringComparison.Ordinal));
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(old, out string? oldError));
+        Assert.Equal($"cache version must be >= {SymbolTable.MinExtractVer}", oldError);
+
+        byte[] genericJgc = System.Text.Encoding.UTF8.GetBytes(ready.Replace(
+            "{",
+            "{\"jgc\":4660,",
+            StringComparison.Ordinal));
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(genericJgc, out string? jgcError));
+        Assert.Equal("generic jgc is forbidden", jgcError);
+    }
+
+    [Fact]
     public void Serialize_IsDeterministicAndLoadableBySymbolTable()
     {
         Il2CppExtractedOffsets offsets = CreateValidOffsets();
