@@ -39,6 +39,24 @@ public sealed class Il2CppOffsetParityComparerTests
     }
 
     [Fact]
+    public void Compare_ReportsBuildScopedRuneOffsetMismatch()
+    {
+        Il2CppExtractedOffsets generated = CreateExpectedOffsets();
+        generated.Symbols["PlayerSaveData.RuneSaveData"] = 999;
+
+        Il2CppOffsetParityReport report = Il2CppOffsetParityComparer.Compare(
+            generated,
+            BuildExpectedJson());
+
+        Assert.False(report.IsMatch);
+        Assert.Contains(report.Mismatches, mismatch =>
+            mismatch.GeneratedKey == "PlayerSaveData.RuneSaveData" &&
+            mismatch.ExpectedKey == "PlayerSaveData.RuneSaveData" &&
+            mismatch.GeneratedValue == "999" &&
+            mismatch.ExpectedValue == "52");
+    }
+
+    [Fact]
     public void Compare_AcceptsCurrentSplitStageValidatorKeys()
     {
         Il2CppExtractedOffsets generated = CreateExpectedOffsets();
@@ -128,6 +146,7 @@ public sealed class Il2CppOffsetParityComparerTests
         result.Symbols["cube_beru"] = 49;
         result.Symbols["cube_resultevt"] = 50;
         result.Symbols["ilx"] = 51;
+        result.Symbols["PlayerSaveData.RuneSaveData"] = 52;
         return result;
     }
 
@@ -151,6 +170,7 @@ public sealed class Il2CppOffsetParityComparerTests
   "stash_off":16,
   "inv_psd_off":17,
   "inv_list_off":18,
+  "PlayerSaveData.RuneSaveData":52,
   "uo_ti":19,
   "uo_dict":20,
   "uo_cur_cache":21,

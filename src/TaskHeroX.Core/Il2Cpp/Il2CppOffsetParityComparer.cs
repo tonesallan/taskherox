@@ -25,6 +25,7 @@ public static class Il2CppOffsetParityComparer
     [
         "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa", "ima",
         "iuw", "izb", "inv_slots_off", "stash_off", "inv_psd_off", "inv_list_off",
+        "PlayerSaveData.RuneSaveData",
         "uo_ti", "uo_dict", "uo_cur_cache", "uo_max", "uo_cur", "uo_wave",
         "bal_ti", "stage_off", "jgk", "jgq", "jgd",
         "uimgr_ti", "uimain", "eby",
