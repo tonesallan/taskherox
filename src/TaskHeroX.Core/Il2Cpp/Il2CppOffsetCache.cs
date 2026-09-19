@@ -77,6 +77,61 @@ public static class Il2CppOffsetCache
         return true;
     }
 
+    /// <summary>
+    /// Valida bytes de cache antes de qualquer carga no SymbolTable. Reusa exatamente o mesmo
+    /// contrato READY do resultado extraido e tambem exige a versao atual do cache em disco/feed.
+    /// </summary>
+    public static bool TryValidateSerialized(ReadOnlySpan<byte> json, out string? error)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                error = "cache root must be an object";
+                return false;
+            }
+
+            if (!doc.RootElement.TryGetProperty("_ver", out JsonElement versionElement) ||
+                !versionElement.TryGetInt32(out int version) ||
+                version < ExtractorVersion)
+            {
+                error = $"cache version must be >= {ExtractorVersion}";
+                return false;
+            }
+
+            var offsets = new Il2CppExtractedOffsets();
+            foreach (JsonProperty property in doc.RootElement.EnumerateObject())
+            {
+                switch (property.Value.ValueKind)
+                {
+                    case JsonValueKind.Number:
+                        if (!string.Equals(property.Name, "_ver", StringComparison.Ordinal) &&
+                            property.Value.TryGetInt64(out long number))
+                            offsets.Symbols[property.Name] = number;
+                        break;
+                    case JsonValueKind.Array when string.Equals(property.Name, "ynj", StringComparison.Ordinal):
+                        foreach (JsonElement item in property.Value.EnumerateArray())
+                            if (item.TryGetInt64(out long ynj)) offsets.Ynj.Add(ynj);
+                        break;
+                    case JsonValueKind.String when string.Equals(property.Name, "inv_class", StringComparison.Ordinal):
+                        offsets.InvClass = property.Value.GetString();
+                        break;
+                    case JsonValueKind.String when string.Equals(property.Name, "ra_class", StringComparison.Ordinal):
+                        offsets.RaClass = property.Value.GetString();
+                        break;
+                }
+            }
+
+            return TryValidate(offsets, out error);
+        }
+        catch (JsonException ex)
+        {
+            error = $"invalid cache json: {ex.Message}";
+            return false;
+        }
+    }
+
     public static string Serialize(Il2CppExtractedOffsets offsets)
     {
         ArgumentNullException.ThrowIfNull(offsets);
