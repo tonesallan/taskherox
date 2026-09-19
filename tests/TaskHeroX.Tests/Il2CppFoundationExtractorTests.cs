@@ -63,6 +63,15 @@ public class CommonSaveData
     public bool useStorage; // 0x60
     public int currentStageKey; // 0x64
     public int maxCompletedStage; // 0x68
+    public int currentStageWave; // 0x6C
+}
+
+public class ItemInfoData
+{
+    public int ITEMTYPE; // 0x34
+    public int GRADE; // 0x38
+    public int ItemSynthesisType; // 0x48
+    public int Level; // 0x6C
 }
 
 public class ItemSaveData
@@ -244,6 +253,11 @@ public static class uw.Cube
         Assert.Equal(0x28L, offsets.Symbols["inv_psd_off"]);
         Assert.Equal(0xB0L, offsets.Symbols["inv_list_off"]);
         Assert.Equal(0x98L, offsets.Symbols["PlayerSaveData.RuneSaveData"]);
+        Assert.Equal(0x10L, offsets.Symbols["itemsave_key"]);
+        Assert.Equal(0x34L, offsets.Symbols["iteminfo_type"]);
+        Assert.Equal(0x38L, offsets.Symbols["iteminfo_grade"]);
+        Assert.Equal(0x48L, offsets.Symbols["iteminfo_synth"]);
+        Assert.Equal(0x6CL, offsets.Symbols["iteminfo_level"]);
         Assert.Equal(0x7300L, offsets.Symbols["inv_klass_ti"]);
         Assert.Equal(0x7400L, offsets.Symbols["bau_ti"]);
         Assert.Equal("box", offsets.InvClass);
@@ -268,7 +282,10 @@ public static class uw.Cube
         Assert.Equal(0x1400L, offsets.Symbols["jgc_type13"]);
         Assert.Equal(0x1500L, offsets.Symbols["jgc_type2"]);
         Assert.Equal(0x10L, offsets.Symbols["psd_common_off"]);
+        Assert.Equal(0x60L, offsets.Symbols["commonsave_usestorage"]);
+        Assert.Equal(0x68L, offsets.Symbols["commonsave_maxstage"]);
         Assert.Equal(0x64L, offsets.Symbols["commonsave_curstage"]);
+        Assert.Equal(0x6CL, offsets.Symbols["CommonSaveData.currentStageWave"]);
         Assert.Equal(0x7500L, offsets.Symbols["uimgr_ti"]);
         Assert.Equal(0xA8L, offsets.Symbols["uimain"]);
         Assert.Equal(0x2F00L, offsets.Symbols["eby"]);

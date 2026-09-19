@@ -147,6 +147,16 @@ public sealed class Il2CppOffsetParityComparerTests
         result.Symbols["cube_resultevt"] = 50;
         result.Symbols["ilx"] = 51;
         result.Symbols["PlayerSaveData.RuneSaveData"] = 52;
+        result.Symbols["itemsave_key"] = 53;
+        result.Symbols["iteminfo_type"] = 54;
+        result.Symbols["iteminfo_grade"] = 55;
+        result.Symbols["iteminfo_synth"] = 56;
+        result.Symbols["iteminfo_level"] = 57;
+        result.Symbols["psd_common_off"] = 58;
+        result.Symbols["commonsave_usestorage"] = 59;
+        result.Symbols["commonsave_maxstage"] = 60;
+        result.Symbols["commonsave_curstage"] = 61;
+        result.Symbols["CommonSaveData.currentStageWave"] = 62;
         return result;
     }
 
@@ -171,6 +181,16 @@ public sealed class Il2CppOffsetParityComparerTests
   "inv_psd_off":17,
   "inv_list_off":18,
   "PlayerSaveData.RuneSaveData":52,
+  "itemsave_key":53,
+  "iteminfo_type":54,
+  "iteminfo_grade":55,
+  "iteminfo_synth":56,
+  "iteminfo_level":57,
+  "psd_common_off":58,
+  "commonsave_usestorage":59,
+  "commonsave_maxstage":60,
+  "commonsave_curstage":61,
+  "CommonSaveData.currentStageWave":62,
   "uo_ti":19,
   "uo_dict":20,
   "uo_cur_cache":21,

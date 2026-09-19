@@ -25,8 +25,11 @@ public static class Il2CppOffsetCache
     private static readonly string[] CriticalNumericSymbols =
     [
         "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa",
-        "ima", "iuw", "izb", "inv_slots_off", "stash_off", "inv_list_off",
-        "PlayerSaveData.RuneSaveData",
+        "ima", "iuw", "izb",
+        "inv_psd_off", "inv_slots_off", "stash_off", "inv_list_off", "PlayerSaveData.RuneSaveData",
+        "itemsave_key", "iteminfo_type", "iteminfo_grade", "iteminfo_synth", "iteminfo_level",
+        "psd_common_off", "commonsave_usestorage", "commonsave_maxstage", "commonsave_curstage",
+        "CommonSaveData.currentStageWave",
         "uo_ti", "uo_dict", "uo_max", "uo_cur", "uo_wave", "bal_ti", "stage_off", "jgk", "jgd",
         "uimgr_ti", "uimain", "eby",
         "cube_grade", "cube_bers", "cube_inlist", "cube_active",
