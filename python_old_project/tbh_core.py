@@ -1085,16 +1085,31 @@ _KNOWN_UI_HANDLERS={"c824ed7a2bb1":{"eby":0x839BB0,"hgr":0xC362A0}}
 
 _EXTRACT_VER=9   # BUMPAR sempre que a extracao mudar: invalida os caches antigos. Sem isso um offset
                  # errado fica gravado no disco e o fix nao chega em quem ja rodou o painel.
-_CRIT_SYMS=("gra","upd","llx","iw","ra_class","ilo","ipu","imx","inf","ili","iog","ioa","ima","iuw","izb","inv_slots_off","stash_off")
+# Contrato READY v9: manter em paridade com Il2CppOffsetCache.CriticalNumericSymbols no C#.
+# O Python legado so pode CARIMBAR _ver=9 quando TODOS estes anchors forem resolvidos para a build atual.
+_CRIT_SYMS=(
+    "gra","upd","llx","iw","ilo","ipu","imx","inf","ili","iog","ioa","ima","iuw","izb",
+    "inv_slots_off","stash_off","uimgr_ti","uimain","eby",
+    "cube_grade","cube_bers","cube_inlist","cube_active","cube_busy","cube_type","cube_lvrecipe","cube_level_off",
+)
 def _offsets_ok(got):
-    """True se o dict tem TODOS os simbolos criticos (nao aceita extracao parcial que quebra features)."""
+    """True somente para uma extracao que satisfaz o contrato READY v9 completo."""
     if not isinstance(got,dict): return False
+    if got.get("jgc"): return False                       # generic jgc e semanticamente ambiguo
     if not all(got.get(k) for k in _CRIT_SYMS): return False
+    if not got.get("ra_class"): return False
+    ynj=got.get("ynj")
+    if not isinstance(ynj,(list,tuple)) or not ynj or not all(ynj): return False
     return bool(got.get("inv_klass_ti") or got.get("bau_ti"))   # singleton do inventario (1 dos 2)
 
 def _missing_syms(got):
-    m=[k for k in _CRIT_SYMS if not (isinstance(got,dict) and got.get(k))]
-    if isinstance(got,dict) and not (got.get("inv_klass_ti") or got.get("bau_ti")): m.append("inv_singleton")
+    if not isinstance(got,dict): return list(_CRIT_SYMS)+["ra_class","ynj","inv_singleton"]
+    m=[k for k in _CRIT_SYMS if not got.get(k)]
+    if not got.get("ra_class"): m.append("ra_class")
+    ynj=got.get("ynj")
+    if not isinstance(ynj,(list,tuple)) or not ynj or not all(ynj): m.append("ynj")
+    if got.get("jgc"): m.append("generic_jgc_forbidden")
+    if not (got.get("inv_klass_ti") or got.get("bau_ti")): m.append("inv_singleton")
     return m
 
 def resolve_symbols(log=lambda m:None):
