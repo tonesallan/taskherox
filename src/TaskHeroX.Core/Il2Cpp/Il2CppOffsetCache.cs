@@ -81,7 +81,7 @@ public static class Il2CppOffsetCache
     /// Valida bytes de cache antes de qualquer carga no SymbolTable. Reusa exatamente o mesmo
     /// contrato READY do resultado extraido e tambem exige a versao atual do cache em disco/feed.
     /// </summary>
-    public static bool TryValidateSerialized(ReadOnlySpan<byte> json, out string? error)
+    public static bool TryValidateSerialized(ReadOnlyMemory<byte> json, out string? error)
     {
         try
         {
@@ -112,7 +112,8 @@ public static class Il2CppOffsetCache
                         break;
                     case JsonValueKind.Array when string.Equals(property.Name, "ynj", StringComparison.Ordinal):
                         foreach (JsonElement item in property.Value.EnumerateArray())
-                            if (item.TryGetInt64(out long ynj)) offsets.Ynj.Add(ynj);
+                            if (item.ValueKind == JsonValueKind.Number && item.TryGetInt64(out long ynj))
+                                offsets.Ynj.Add(ynj);
                         break;
                     case JsonValueKind.String when string.Equals(property.Name, "inv_class", StringComparison.Ordinal):
                         offsets.InvClass = property.Value.GetString();
