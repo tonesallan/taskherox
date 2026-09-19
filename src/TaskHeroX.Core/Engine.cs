@@ -148,7 +148,18 @@ public sealed class Engine : IDisposable
     /// </summary>
     public bool LoadOffsetsFrom(string path, string source = "feed")
     {
-        if (Symbols is null || !Symbols.LoadOffsetsJson(path, requireVersion: true)) return false;
+        if (Symbols is null) return false;
+
+        byte[] body;
+        try { body = File.ReadAllBytes(path); }
+        catch { return false; }
+
+        // Valida os MESMOS bytes que serao carregados. Um cache v9 parcial/tampered nunca pode
+        // transformar AOB ONLY em READY nem deixar simbolos parciais no SymbolTable da sessao.
+        if (!Il2CppOffsetCache.TryValidateSerialized(body, out _)) return false;
+        using var stream = new MemoryStream(body, writable: false);
+        if (!Symbols.LoadOffsetsJson(stream, requireVersion: true)) return false;
+
         OffsetsLoaded = true;
         OffsetsSource = source;
         Emit($"offsets do build {BuildHash} carregados de {source} - features completas de volta");
