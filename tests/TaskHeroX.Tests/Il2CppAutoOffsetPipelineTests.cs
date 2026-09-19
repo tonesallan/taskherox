@@ -61,7 +61,8 @@ public sealed class Il2CppAutoOffsetPipelineTests
         foreach (string key in new[]
         {
             "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa", "ima",
-            "iuw", "izb", "inv_slots_off", "stash_off",
+            "iuw", "izb", "inv_slots_off", "stash_off", "inv_list_off",
+            "PlayerSaveData.RuneSaveData",
             "uo_ti", "uo_dict", "uo_max", "uo_cur", "uo_wave", "bal_ti", "stage_off", "jgk", "jgd",
             "uimgr_ti", "uimain", "eby",
             "cube_grade", "cube_bers", "cube_inlist", "cube_active",

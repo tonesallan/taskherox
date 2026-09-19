@@ -48,6 +48,7 @@ public class PlayerSaveData
 {
     public CommonSaveData commonSaveData; // 0x10
     public List<ItemSaveData> itemSaveDatas; // 0xB0
+    public List<RuneSaveData> RuneSaveData; // 0x98
     public List<InventorySaveData> inventory; // 0x88
     public List<StashSaveData> stash; // 0x90
 }
@@ -242,6 +243,7 @@ public static class uw.Cube
         Assert.Equal(0x90L, offsets.Symbols["stash_off"]);
         Assert.Equal(0x28L, offsets.Symbols["inv_psd_off"]);
         Assert.Equal(0xB0L, offsets.Symbols["inv_list_off"]);
+        Assert.Equal(0x98L, offsets.Symbols["PlayerSaveData.RuneSaveData"]);
         Assert.Equal(0x7300L, offsets.Symbols["inv_klass_ti"]);
         Assert.Equal(0x7400L, offsets.Symbols["bau_ti"]);
         Assert.Equal("box", offsets.InvClass);

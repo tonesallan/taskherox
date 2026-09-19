@@ -72,6 +72,22 @@ public sealed class Il2CppOffsetCacheTests
 
         Assert.False(ok);
         Assert.Equal("missing critical symbol: jgk", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("inv_list_off");
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing critical symbol: inv_list_off", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("PlayerSaveData.RuneSaveData");
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing critical symbol: PlayerSaveData.RuneSaveData", error);
     }
 
     [Fact]
@@ -141,7 +157,8 @@ public sealed class Il2CppOffsetCacheTests
         foreach (string key in new[]
         {
             "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa",
-            "ima", "iuw", "izb", "inv_slots_off", "stash_off",
+            "ima", "iuw", "izb", "inv_slots_off", "stash_off", "inv_list_off",
+            "PlayerSaveData.RuneSaveData",
             "uo_ti", "uo_dict", "uo_max", "uo_cur", "uo_wave", "bal_ti", "stage_off", "jgk", "jgd",
             "uimgr_ti", "uimain", "eby",
             "cube_grade", "cube_bers", "cube_inlist", "cube_active",
