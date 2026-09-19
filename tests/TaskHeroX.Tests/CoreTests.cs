@@ -93,6 +93,29 @@ public class CoreTests
     }
 
     [Fact]
+    public void Engine_LoadOffsetsFrom_RejectsIncompleteV9WithoutMutatingLiveSymbols()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"taskherox_partial_{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, $"{{\"_ver\":{SymbolTable.MinExtractVer},\"gra\":123}}");
+
+        try
+        {
+            using var engine = new Engine();
+            var symbols = new SymbolTable();
+            SetBackingField(engine, "Symbols", symbols);
+
+            Assert.False(engine.LoadOffsetsFrom(path, source: "feed"));
+            Assert.False(symbols.Has("gra"));
+            Assert.False(engine.OffsetsLoaded);
+            Assert.Null(engine.OffsetsSource);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void AutoUpdate_TryParseSha256_AcceptsStandardSidecar()
     {
         const string hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
