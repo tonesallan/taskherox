@@ -86,12 +86,10 @@ public static class Il2CppAutoOffsetFallback
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
                 cancellationToken).ConfigureAwait(false);
 
-            var probe = new SymbolTable();
-            if (!probe.LoadOffsetsJson(tempCache, requireVersion: true))
-                return new(null, "cache gerado foi rejeitado pelo SymbolTable");
-
-            if (probe.Has("jgc"))
-                return new(null, "cache gerado contem generic jgc");
+            byte[] serialized = await File.ReadAllBytesAsync(tempCache, cancellationToken)
+                .ConfigureAwait(false);
+            if (!Il2CppOffsetCache.TryValidateSerialized(serialized, out string? validationError))
+                return new(null, $"cache gerado foi rejeitado no gate READY: {validationError}");
 
             File.Move(tempCache, fullCachePath, overwrite: true);
             tempCache = string.Empty;
