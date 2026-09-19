@@ -52,6 +52,13 @@ public static class OffsetsFeed
             if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(body, out _))
                 return null;
 
+            // Preserva a guarda historica especifica do feed para navegacao/stage runtime.
+            // Ela e adicional ao contrato READY canonico; nao o substitui nem o enfraquece.
+            var probe = new TaskHeroX.Core.Il2Cpp.SymbolTable();
+            using (var ms = new MemoryStream(body, writable: false))
+                if (!probe.LoadOffsetsJson(ms, requireVersion: true) || !probe.Has("uo_ti"))
+                    return null;
+
             var path = CachePath(hash);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             await File.WriteAllBytesAsync(path, body, ct).ConfigureAwait(false);
