@@ -83,7 +83,7 @@ public sealed class Engine : IDisposable
                     // requireVersion: cache em disco de extrator antigo Ã© DESCARTADO (senÃ£o um offset
                     // errado gravado uma vez sobrevive a todas as correÃ§Ãµes â€” o cache tem prioridade
                     // sobre os embutidos). Ver SymbolTable.MinExtractVer.
-                    if (Symbols.LoadOffsetsJson(cand, requireVersion: true))
+                    if (TryLoadReadyOffsets(cand))
                     {
                         loaded = true;
                         OffsetsSource = "cache local";
@@ -146,7 +146,7 @@ public sealed class Engine : IDisposable
     /// jogo atualizou e o build ainda nÃ£o Ã© conhecido por este exe. Cura a sessÃ£o em andamento: as features
     /// que dependem de RVA voltam sem precisar reiniciar o painel.
     /// </summary>
-    public bool LoadOffsetsFrom(string path, string source = "feed")
+    private bool TryLoadReadyOffsets(string path)
     {
         if (Symbols is null) return false;
 
@@ -158,7 +158,12 @@ public sealed class Engine : IDisposable
         // transformar AOB ONLY em READY nem deixar simbolos parciais no SymbolTable da sessao.
         if (!Il2CppOffsetCache.TryValidateSerialized(body, out _)) return false;
         using var stream = new MemoryStream(body, writable: false);
-        if (!Symbols.LoadOffsetsJson(stream, requireVersion: true)) return false;
+        return Symbols.LoadOffsetsJson(stream, requireVersion: true);
+    }
+
+    public bool LoadOffsetsFrom(string path, string source = "feed")
+    {
+        if (!TryLoadReadyOffsets(path)) return false;
 
         OffsetsLoaded = true;
         OffsetsSource = source;
