@@ -218,6 +218,10 @@ public static class SupportBundleCollector
     private static string DetectOffsetsSource(Engine engine, IReadOnlyList<string> rawLogs)
     {
         if (!engine.OffsetsLoaded) return "not-loaded";
+        if (!string.IsNullOrWhiteSpace(engine.OffsetsSource))
+            return engine.OffsetsSource;
+
+        // Compatibilidade com sessões/fixtures anteriores a Engine.OffsetsSource.
         if (engine.BuildHash is { Length: > 0 } hash && GameConstants.KnownBuilds.ContainsKey(hash))
             return "known-build";
 

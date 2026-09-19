@@ -46,12 +46,18 @@ public static class OffsetsFeed
             var body = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
             if (body.Length is < 512 or > 4_000_000) return null; // tamanho fora do plausível -> não é o arquivo
 
-            // Só grava se carregar, for de um extrator ATUAL (_ver) e trouxer os símbolos que importam.
-            // Sem o requireVersion, um json antigo publicado no feed viraria cache tóxico permanente.
+            // Só persiste um cache que satisfaz o MESMO contrato READY do auto-extrator.
+            // Versão atual, anchors críticos, Cube v9, ynj, singleton de inventário e ausência de
+            // generic jgc são validados juntos; feed parcial/tampered permanece em modo degradado.
+            if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(body, out _))
+                return null;
+
+            // Preserva a guarda historica especifica do feed para navegacao/stage runtime.
+            // Ela e adicional ao contrato READY canonico; nao o substitui nem o enfraquece.
             var probe = new TaskHeroX.Core.Il2Cpp.SymbolTable();
-            using (var ms = new MemoryStream(body))
-                if (!probe.LoadOffsetsJson(ms, requireVersion: true)) return null;
-            if (!probe.Has("gra") || !probe.Has("uo_ti")) return null;
+            using (var ms = new MemoryStream(body, writable: false))
+                if (!probe.LoadOffsetsJson(ms, requireVersion: true) || !probe.Has("uo_ti"))
+                    return null;
 
             var path = CachePath(hash);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
