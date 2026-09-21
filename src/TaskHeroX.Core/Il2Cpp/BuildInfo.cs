@@ -45,7 +45,7 @@ public static class BuildInfo
                 path,
                 FileMode.Open,
                 FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete);
+                FileShare.Read | FileShare.Delete);
             return Convert.ToHexStringLower(SHA256.HashData(fs));
         }
         catch
