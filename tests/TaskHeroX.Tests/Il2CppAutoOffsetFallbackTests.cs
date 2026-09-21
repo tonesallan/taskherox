@@ -120,6 +120,90 @@ public sealed class Il2CppAutoOffsetFallbackTests
     }
 
     [Fact]
+    public async Task InputsStillMatch_RejectsEitherIl2CppInputChanging()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "TaskHeroX-input-fingerprint-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+
+        try
+        {
+            string gameAssembly = Path.Combine(dir, "GameAssembly.dll");
+            string metadata = Path.Combine(dir, "global-metadata.dat");
+            await File.WriteAllBytesAsync(gameAssembly, [1, 2, 3, 4, 5]);
+            await File.WriteAllBytesAsync(metadata, [10, 20, 30, 40, 50]);
+
+            string expectedAssemblyHash = Assert.IsType<string>(BuildInfo.DllHash(gameAssembly));
+            string expectedMetadataHash = Assert.IsType<string>(BuildInfo.FileSha256(metadata));
+
+            Assert.True(Il2CppAutoOffsetFallback.InputsStillMatch(
+                expectedAssemblyHash,
+                gameAssembly,
+                expectedMetadataHash,
+                metadata,
+                out string? initialError), initialError);
+
+            await File.WriteAllBytesAsync(metadata, [10, 20, 30, 40, 51]);
+
+            Assert.False(Il2CppAutoOffsetFallback.InputsStillMatch(
+                expectedAssemblyHash,
+                gameAssembly,
+                expectedMetadataHash,
+                metadata,
+                out string? metadataError));
+            Assert.Contains("global-metadata.dat mudou durante a extracao", metadataError, StringComparison.Ordinal);
+
+            await File.WriteAllBytesAsync(metadata, [10, 20, 30, 40, 50]);
+            await File.WriteAllBytesAsync(gameAssembly, [1, 2, 3, 4, 6]);
+
+            Assert.False(Il2CppAutoOffsetFallback.InputsStillMatch(
+                expectedAssemblyHash,
+                gameAssembly,
+                expectedMetadataHash,
+                metadata,
+                out string? assemblyError));
+            Assert.Contains("build mudou durante a extracao", assemblyError, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task FileSha256_UsesTheWholeFile()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "TaskHeroX-filehash-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+
+        try
+        {
+            string first = Path.Combine(dir, "first.bin");
+            string second = Path.Combine(dir, "second.bin");
+
+            byte[] prefix = new byte[2_000_000];
+            Array.Fill(prefix, (byte)0x5A);
+
+            await using (var stream = File.Create(first))
+            {
+                await stream.WriteAsync(prefix);
+                await stream.WriteAsync([1]);
+            }
+            await using (var stream = File.Create(second))
+            {
+                await stream.WriteAsync(prefix);
+                await stream.WriteAsync([2]);
+            }
+
+            Assert.Equal(BuildInfo.DllHash(first), BuildInfo.DllHash(second));
+            Assert.NotEqual(BuildInfo.FileSha256(first), BuildInfo.FileSha256(second));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task TryGenerateAsync_RejectsMissingMetadataWithoutPersistingCache()
     {
         string dir = Path.Combine(Path.GetTempPath(), "TaskHeroX-fallback-test-" + Guid.NewGuid().ToString("N"));

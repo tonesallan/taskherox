@@ -47,6 +47,10 @@ public static class Il2CppAutoOffsetFallback
         if (!File.Exists(metadataPath))
             return new(null, "global-metadata.dat nao encontrado");
 
+        string? expectedMetadataHash = BuildInfo.FileSha256(metadataPath);
+        if (string.IsNullOrWhiteSpace(expectedMetadataHash))
+            return new(null, "global-metadata.dat hash indisponivel");
+
         string toolDir = Path.Combine(
             Path.GetTempPath(),
             "TaskHeroX-dumper-" + Guid.NewGuid().ToString("N"));
@@ -70,11 +74,18 @@ public static class Il2CppAutoOffsetFallback
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Evita publicar offsets de um build enquanto os arquivos do jogo foram atualizados
-            // durante a extracao.
-            currentHash = BuildInfo.DllHash(gameAssemblyPath);
-            if (!string.Equals(currentHash, expectedHash, StringComparison.OrdinalIgnoreCase))
-                return new(null, $"build mudou durante a extracao ({currentHash ?? "?"})");
+            // Evita publicar offsets se qualquer input IL2CPP mudou enquanto o dumper estava
+            // em execucao. GameAssembly usa a identidade de build existente; metadata usa SHA-256
+            // completo porque alteracoes fora dos primeiros 2 MB tambem invalidam o par.
+            if (!InputsStillMatch(
+                    expectedHash,
+                    gameAssemblyPath,
+                    expectedMetadataHash,
+                    metadataPath,
+                    out string? inputError))
+            {
+                return new(null, inputError);
+            }
 
             string fullCachePath = Path.GetFullPath(cachePath);
             string cacheDirectory = Path.GetDirectoryName(fullCachePath)!;
@@ -109,6 +120,31 @@ public static class Il2CppAutoOffsetFallback
             TryDeleteFile(tempCache);
             TryDeleteDirectory(toolDir);
         }
+    }
+
+    internal static bool InputsStillMatch(
+        string expectedAssemblyHash,
+        string gameAssemblyPath,
+        string expectedMetadataHash,
+        string metadataPath,
+        out string? error)
+    {
+        string? currentAssemblyHash = BuildInfo.DllHash(gameAssemblyPath);
+        if (!string.Equals(currentAssemblyHash, expectedAssemblyHash, StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"build mudou durante a extracao ({currentAssemblyHash ?? "?"})";
+            return false;
+        }
+
+        string? currentMetadataHash = BuildInfo.FileSha256(metadataPath);
+        if (!string.Equals(currentMetadataHash, expectedMetadataHash, StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"global-metadata.dat mudou durante a extracao ({currentMetadataHash ?? "?"})";
+            return false;
+        }
+
+        error = null;
+        return true;
     }
 
     private static void TryDeleteFile(string? path)
