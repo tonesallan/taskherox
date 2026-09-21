@@ -36,7 +36,7 @@ public sealed class Il2CppAutoOffsetPipelineTests
         InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
             Il2CppAutoOffsetPipeline.FinalizeOffsets(offsets));
 
-        Assert.Contains("missing critical symbol", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("missing or invalid critical symbol", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

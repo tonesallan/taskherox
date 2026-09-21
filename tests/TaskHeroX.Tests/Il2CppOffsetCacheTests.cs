@@ -144,7 +144,7 @@ public sealed class Il2CppOffsetCacheTests
         byte[] partial = System.Text.Encoding.UTF8.GetBytes(
             $"{{\"_ver\":{SymbolTable.MinExtractVer},\"gra\":1}}");
         Assert.False(Il2CppOffsetCache.TryValidateSerialized(partial, out string? partialError));
-        Assert.Equal("missing critical symbol: upd", partialError);
+        Assert.Equal("missing or invalid critical symbol: upd", partialError);
 
         byte[] old = System.Text.Encoding.UTF8.GetBytes(ready.Replace(
             $"\"_ver\":{SymbolTable.MinExtractVer}",
