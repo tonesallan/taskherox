@@ -60,43 +60,58 @@ public static class OffsetsFeed
                     return null;
 
             var path = CachePath(hash);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-
-            // Publicacao atomica: nunca grava diretamente no arquivo final. Se houver cancelamento,
-            // crash ou erro de disco durante a escrita, o cache anterior permanece intacto e o
-            // temporario incompleto e descartado.
-            string tempPath = path + ".tmp-" + Guid.NewGuid().ToString("N");
-            try
-            {
-                await File.WriteAllBytesAsync(tempPath, body, ct).ConfigureAwait(false);
-
-                byte[] persisted = await File.ReadAllBytesAsync(tempPath, ct).ConfigureAwait(false);
-                if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(persisted, out _))
-                    return null;
-
-                File.Move(tempPath, path, overwrite: true);
-                tempPath = string.Empty;
-                return path;
-            }
-            finally
-            {
-                if (!string.IsNullOrWhiteSpace(tempPath))
-                {
-                    try
-                    {
-                        if (File.Exists(tempPath))
-                            File.Delete(tempPath);
-                    }
-                    catch
-                    {
-                        // best-effort cleanup; nunca promove arquivo parcial ao cache final
-                    }
-                }
-            }
+            return await TryPublishValidatedCacheAsync(path, body, ct).ConfigureAwait(false)
+                ? path
+                : null;
         }
         catch
         {
             return null;   // sem rede / disco read-only: segue degradado, o banner explica
+        }
+    }
+
+    internal static async Task<bool> TryPublishValidatedCacheAsync(
+        string path,
+        ReadOnlyMemory<byte> body,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(body, out _))
+            return false;
+
+        string fullPath = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+
+        // Publicacao atomica: nunca grava diretamente no arquivo final. Se houver cancelamento,
+        // crash ou erro de disco durante a escrita, o cache anterior permanece intacto e o
+        // temporario incompleto e descartado.
+        string tempPath = fullPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            await File.WriteAllBytesAsync(tempPath, body.ToArray(), ct).ConfigureAwait(false);
+
+            byte[] persisted = await File.ReadAllBytesAsync(tempPath, ct).ConfigureAwait(false);
+            if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(persisted, out _))
+                return false;
+
+            File.Move(tempPath, fullPath, overwrite: true);
+            tempPath = string.Empty;
+            return true;
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(tempPath))
+            {
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch
+                {
+                    // best-effort cleanup; nunca promove arquivo parcial ao cache final
+                }
+            }
         }
     }
 }
