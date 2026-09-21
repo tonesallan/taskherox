@@ -92,10 +92,10 @@ def main() -> None:
         }:
             selected_nodes.append(node)
 
-    namespace: dict[str, object] = {}
+    namespace: dict[str, object] = {"__builtins__": __builtins__}
     isolated = ast.Module(body=selected_nodes, type_ignores=[])
     ast.fix_missing_locations(isolated)
-    exec(compile(isolated, str(PYTHON_SOURCE), "exec"), {"__builtins__": __builtins__}, namespace)
+    exec(compile(isolated, str(PYTHON_SOURCE), "exec"), namespace)
 
     offsets_ok = namespace.get("_offsets_ok")
     missing_syms = namespace.get("_missing_syms")
