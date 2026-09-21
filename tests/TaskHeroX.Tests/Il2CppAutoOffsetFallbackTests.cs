@@ -137,6 +137,7 @@ public sealed class Il2CppAutoOffsetFallbackTests
 
             Assert.True(Il2CppAutoOffsetFallback.InputsStillMatch(
                 expectedAssemblyHash,
+                Assert.IsType<string>(BuildInfo.FileSha256(gameAssembly)),
                 gameAssembly,
                 expectedMetadataHash,
                 metadata,
@@ -146,6 +147,7 @@ public sealed class Il2CppAutoOffsetFallbackTests
 
             Assert.False(Il2CppAutoOffsetFallback.InputsStillMatch(
                 expectedAssemblyHash,
+                Assert.IsType<string>(BuildInfo.FileSha256(gameAssembly)),
                 gameAssembly,
                 expectedMetadataHash,
                 metadata,
@@ -157,11 +159,60 @@ public sealed class Il2CppAutoOffsetFallbackTests
 
             Assert.False(Il2CppAutoOffsetFallback.InputsStillMatch(
                 expectedAssemblyHash,
+                Assert.IsType<string>(BuildInfo.FileSha256(gameAssembly)),
                 gameAssembly,
                 expectedMetadataHash,
                 metadata,
                 out string? assemblyError));
             Assert.Contains("build mudou durante a extracao", assemblyError, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task InputsStillMatch_RejectsGameAssemblyChangeOutsidePublicBuildHashWindow()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "TaskHeroX-input-fullhash-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+
+        try
+        {
+            string gameAssembly = Path.Combine(dir, "GameAssembly.dll");
+            string metadata = Path.Combine(dir, "global-metadata.dat");
+
+            byte[] prefix = new byte[2_000_000];
+            Array.Fill(prefix, (byte)0x5A);
+            await using (var stream = File.Create(gameAssembly))
+            {
+                await stream.WriteAsync(prefix);
+                await stream.WriteAsync(new byte[] { 1 });
+            }
+            await File.WriteAllBytesAsync(metadata, [10, 20, 30]);
+
+            string expectedBuildHash = Assert.IsType<string>(BuildInfo.DllHash(gameAssembly));
+            string expectedAssemblyFileHash = Assert.IsType<string>(BuildInfo.FileSha256(gameAssembly));
+            string expectedMetadataHash = Assert.IsType<string>(BuildInfo.FileSha256(metadata));
+
+            await using (var stream = new FileStream(gameAssembly, FileMode.Open, FileAccess.Write, FileShare.Read))
+            {
+                stream.Position = 2_000_000;
+                await stream.WriteAsync(new byte[] { 2 });
+            }
+
+            Assert.Equal(expectedBuildHash, BuildInfo.DllHash(gameAssembly));
+            Assert.NotEqual(expectedAssemblyFileHash, BuildInfo.FileSha256(gameAssembly));
+
+            Assert.False(Il2CppAutoOffsetFallback.InputsStillMatch(
+                expectedBuildHash,
+                expectedAssemblyFileHash,
+                gameAssembly,
+                expectedMetadataHash,
+                metadata,
+                out string? error));
+            Assert.Contains("GameAssembly.dll mudou durante a extracao", error, StringComparison.Ordinal);
         }
         finally
         {

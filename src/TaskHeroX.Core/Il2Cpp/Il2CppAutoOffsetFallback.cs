@@ -36,6 +36,10 @@ public static class Il2CppAutoOffsetFallback
         if (!string.Equals(currentHash, expectedHash, StringComparison.OrdinalIgnoreCase))
             return new(null, $"build mudou antes da extracao ({currentHash ?? "?"})");
 
+        string? expectedAssemblyFileHash = BuildInfo.FileSha256(gameAssemblyPath);
+        if (string.IsNullOrWhiteSpace(expectedAssemblyFileHash))
+            return new(null, "GameAssembly.dll hash completo indisponivel");
+
         string gameDir = Path.GetDirectoryName(Path.GetFullPath(gameAssemblyPath))!;
         string metadataPath = Path.Combine(
             gameDir,
@@ -79,6 +83,7 @@ public static class Il2CppAutoOffsetFallback
             // completo porque alteracoes fora dos primeiros 2 MB tambem invalidam o par.
             if (!InputsStillMatch(
                     expectedHash,
+                    expectedAssemblyFileHash,
                     gameAssemblyPath,
                     expectedMetadataHash,
                     metadataPath,
@@ -123,16 +128,24 @@ public static class Il2CppAutoOffsetFallback
     }
 
     internal static bool InputsStillMatch(
-        string expectedAssemblyHash,
+        string expectedBuildHash,
+        string expectedAssemblyFileHash,
         string gameAssemblyPath,
         string expectedMetadataHash,
         string metadataPath,
         out string? error)
     {
-        string? currentAssemblyHash = BuildInfo.DllHash(gameAssemblyPath);
-        if (!string.Equals(currentAssemblyHash, expectedAssemblyHash, StringComparison.OrdinalIgnoreCase))
+        string? currentBuildHash = BuildInfo.DllHash(gameAssemblyPath);
+        if (!string.Equals(currentBuildHash, expectedBuildHash, StringComparison.OrdinalIgnoreCase))
         {
-            error = $"build mudou durante a extracao ({currentAssemblyHash ?? "?"})";
+            error = $"build mudou durante a extracao ({currentBuildHash ?? "?"})";
+            return false;
+        }
+
+        string? currentAssemblyFileHash = BuildInfo.FileSha256(gameAssemblyPath);
+        if (!string.Equals(currentAssemblyFileHash, expectedAssemblyFileHash, StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"GameAssembly.dll mudou durante a extracao ({currentAssemblyFileHash ?? "?"})";
             return false;
         }
 
