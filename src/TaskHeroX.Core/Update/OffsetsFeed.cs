@@ -11,7 +11,7 @@ namespace TaskHeroX.Core.Update;
 /// Falha em silêncio (sem rede / build ainda não publicado): o painel só segue no modo degradado
 /// (cheats por AOB) e o banner explica o porquê.
 /// </summary>
-public static class OffsetsFeed
+internal static class OffsetsFeed
 {
     /// <summary>Raiz crua do repo — a pasta <c>offsets/</c> guarda um <c>offsets_&lt;hash&gt;.json</c> por build.</summary>
     public const string BaseUrl = "https://raw.githubusercontent.com/matheusbranhann/taskbarhero-bot/main/offsets";
