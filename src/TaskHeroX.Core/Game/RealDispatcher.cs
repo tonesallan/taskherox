@@ -40,6 +40,14 @@ public sealed class RealDispatcher : IMainThreadDispatcher, IDisposable
 
     public bool Command(int cmd, nint argP = 0, int argI = 0)
     {
+        // cmd11 e uma rota legada opcional. Sem llm, montar LLM como Base+0 faria a cave
+        // tentar chamar o inicio do modulo; falha fechado antes mesmo de instalar o hook.
+        if (cmd == 11 && _sym.Get("llm") == 0)
+        {
+            Log?.Invoke("dispatcher: cmd11 indisponivel sem sym llm");
+            return false;
+        }
+
         if (!EnsureInstalled()) return false;
         return Dispatch(cmd, argP, argI, null, 0, 800);
     }
