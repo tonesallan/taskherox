@@ -61,8 +61,38 @@ public static class OffsetsFeed
 
             var path = CachePath(hash);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            await File.WriteAllBytesAsync(path, body, ct).ConfigureAwait(false);
-            return path;
+
+            // Publicacao atomica: nunca grava diretamente no arquivo final. Se houver cancelamento,
+            // crash ou erro de disco durante a escrita, o cache anterior permanece intacto e o
+            // temporario incompleto e descartado.
+            string tempPath = path + ".tmp-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                await File.WriteAllBytesAsync(tempPath, body, ct).ConfigureAwait(false);
+
+                byte[] persisted = await File.ReadAllBytesAsync(tempPath, ct).ConfigureAwait(false);
+                if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(persisted, out _))
+                    return null;
+
+                File.Move(tempPath, path, overwrite: true);
+                tempPath = string.Empty;
+                return path;
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(tempPath))
+                {
+                    try
+                    {
+                        if (File.Exists(tempPath))
+                            File.Delete(tempPath);
+                    }
+                    catch
+                    {
+                        // best-effort cleanup; nunca promove arquivo parcial ao cache final
+                    }
+                }
+            }
         }
         catch
         {
