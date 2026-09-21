@@ -114,6 +114,8 @@ def main() -> None:
         ("boolean critical value", {"gra": True}, "gra"),
         ("negative critical value", {"gra": -1}, "gra"),
         ("oversized critical value", {"gra": 0x1_0000_0000}, "gra"),
+        ("numeric ra_class", {"ra_class": 123}, "ra_class"),
+        ("whitespace ra_class", {"ra_class": "   "}, "ra_class"),
         ("malformed ynj element", {"ynj": [1, "junk"]}, "ynj"),
         ("boolean inventory singleton", {"inv_klass_ti": True}, "inv_singleton"),
         ("negative inventory singleton", {"inv_klass_ti": -1}, "inv_singleton"),
