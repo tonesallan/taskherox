@@ -119,8 +119,14 @@ public static class Il2CppOffsetCache
                         break;
                     case JsonValueKind.Array when string.Equals(property.Name, "ynj", StringComparison.Ordinal):
                         foreach (JsonElement item in property.Value.EnumerateArray())
-                            if (item.ValueKind == JsonValueKind.Number && item.TryGetInt64(out long ynj))
-                                offsets.Ynj.Add(ynj);
+                        {
+                            if (item.ValueKind != JsonValueKind.Number || !item.TryGetInt64(out long ynj))
+                            {
+                                error = "invalid ynj element";
+                                return false;
+                            }
+                            offsets.Ynj.Add(ynj);
+                        }
                         break;
                     case JsonValueKind.String when string.Equals(property.Name, "inv_class", StringComparison.Ordinal):
                         offsets.InvClass = property.Value.GetString();

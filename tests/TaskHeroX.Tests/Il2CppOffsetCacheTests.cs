@@ -165,6 +165,13 @@ public sealed class Il2CppOffsetCacheTests
             StringComparison.Ordinal));
         Assert.False(Il2CppOffsetCache.TryValidateSerialized(genericJgc, out string? jgcError));
         Assert.Equal("generic jgc is forbidden", jgcError);
+
+        byte[] malformedYnj = System.Text.Encoding.UTF8.GetBytes(ready.Replace(
+            "\"ynj\":[4660]",
+            "\"ynj\":[4660,\"junk\"]",
+            StringComparison.Ordinal));
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(malformedYnj, out string? ynjElementError));
+        Assert.Equal("invalid ynj element", ynjElementError);
     }
 
     [Fact]
