@@ -57,6 +57,11 @@ def main() -> None:
     python_source = PYTHON_SOURCE.read_text(encoding="utf-8-sig")
     csharp_source = CSHARP_SOURCE.read_text(encoding="utf-8-sig")
 
+    try:
+        tree = ast.parse(python_source, filename=str(PYTHON_SOURCE))
+    except SyntaxError as exc:
+        stop(f"legacy Python syntax error: {exc}")
+
     python_keys = python_critical_symbols(python_source)
     csharp_keys = csharp_critical_symbols(csharp_source)
 
