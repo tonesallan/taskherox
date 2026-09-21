@@ -47,7 +47,7 @@ public sealed class Il2CppOffsetCacheTests
         bool ok = Il2CppOffsetCache.TryValidate(offsets, out string? error);
 
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: eby", error);
+        Assert.Equal("missing or invalid critical symbol: eby", error);
 
         offsets = CreateValidOffsets();
         offsets.Ynj.Clear();
@@ -55,7 +55,7 @@ public sealed class Il2CppOffsetCacheTests
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
 
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: ynj", error);
+        Assert.Equal("missing or invalid critical symbol: ynj", error);
 
         offsets = CreateValidOffsets();
         offsets.Symbols.Remove("cube_grade");
@@ -63,7 +63,7 @@ public sealed class Il2CppOffsetCacheTests
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
 
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: cube_grade", error);
+        Assert.Equal("missing or invalid critical symbol: cube_grade", error);
 
         offsets = CreateValidOffsets();
         offsets.Symbols.Remove("jgk");
@@ -71,7 +71,7 @@ public sealed class Il2CppOffsetCacheTests
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
 
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: jgk", error);
+        Assert.Equal("missing or invalid critical symbol: jgk", error);
 
         offsets = CreateValidOffsets();
         offsets.Symbols.Remove("inv_list_off");
@@ -79,7 +79,7 @@ public sealed class Il2CppOffsetCacheTests
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
 
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: inv_list_off", error);
+        Assert.Equal("missing or invalid critical symbol: inv_list_off", error);
 
         offsets = CreateValidOffsets();
         offsets.Symbols.Remove("PlayerSaveData.RuneSaveData");
@@ -87,25 +87,48 @@ public sealed class Il2CppOffsetCacheTests
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
 
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: PlayerSaveData.RuneSaveData", error);
+        Assert.Equal("missing or invalid critical symbol: PlayerSaveData.RuneSaveData", error);
 
         offsets = CreateValidOffsets();
         offsets.Symbols.Remove("commonsave_usestorage");
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: commonsave_usestorage", error);
+        Assert.Equal("missing or invalid critical symbol: commonsave_usestorage", error);
 
         offsets = CreateValidOffsets();
         offsets.Symbols.Remove("commonsave_maxstage");
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: commonsave_maxstage", error);
+        Assert.Equal("missing or invalid critical symbol: commonsave_maxstage", error);
 
         offsets = CreateValidOffsets();
         offsets.Symbols.Remove("iteminfo_synth");
         ok = Il2CppOffsetCache.TryValidate(offsets, out error);
         Assert.False(ok);
-        Assert.Equal("missing critical symbol: iteminfo_synth", error);
+        Assert.Equal("missing or invalid critical symbol: iteminfo_synth", error);
+    }
+
+    [Fact]
+    public void TryValidate_RejectsNonPositiveCriticalValues()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        offsets.Symbols["gra"] = -1;
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? graError));
+        Assert.Equal("missing or invalid critical symbol: gra", graError);
+
+        offsets = CreateValidOffsets();
+        offsets.Ynj.Clear();
+        offsets.Ynj.Add(-1);
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? ynjError));
+        Assert.Equal("missing or invalid critical symbol: ynj", ynjError);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols["inv_klass_ti"] = -1;
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? singletonError));
+        Assert.Equal("missing inventory singleton: inv_klass_ti or bau_ti", singletonError);
     }
 
     [Fact]
