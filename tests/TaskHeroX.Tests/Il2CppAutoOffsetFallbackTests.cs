@@ -186,12 +186,12 @@ public sealed class Il2CppAutoOffsetFallbackTests
             await using (var stream = File.Create(first))
             {
                 await stream.WriteAsync(prefix);
-                await stream.WriteAsync([1]);
+                await stream.WriteAsync(new byte[] { 1 });
             }
             await using (var stream = File.Create(second))
             {
                 await stream.WriteAsync(prefix);
-                await stream.WriteAsync([2]);
+                await stream.WriteAsync(new byte[] { 2 });
             }
 
             Assert.Equal(BuildInfo.DllHash(first), BuildInfo.DllHash(second));
