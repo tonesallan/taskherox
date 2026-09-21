@@ -49,7 +49,7 @@ public static class Il2CppOffsetCache
 
         foreach (string key in CriticalNumericSymbols)
         {
-            if (!offsets.Symbols.TryGetValue(key, out long value) || value <= 0)
+            if (!offsets.Symbols.TryGetValue(key, out long value) || value <= 0 || value > uint.MaxValue)
             {
                 error = $"missing or invalid critical symbol: {key}";
                 return false;
@@ -62,15 +62,17 @@ public static class Il2CppOffsetCache
             return false;
         }
 
-        if (offsets.Ynj.Count == 0 || offsets.Ynj.Any(value => value <= 0))
+        if (offsets.Ynj.Count == 0 || offsets.Ynj.Any(value => value <= 0 || value > uint.MaxValue))
         {
             error = "missing or invalid critical symbol: ynj";
             return false;
         }
 
         bool hasInventorySingleton =
-            (offsets.Symbols.TryGetValue("inv_klass_ti", out long invKlassTi) && invKlassTi > 0) ||
-            (offsets.Symbols.TryGetValue("bau_ti", out long bauTi) && bauTi > 0);
+            (offsets.Symbols.TryGetValue("inv_klass_ti", out long invKlassTi) &&
+             invKlassTi is > 0 and <= uint.MaxValue) ||
+            (offsets.Symbols.TryGetValue("bau_ti", out long bauTi) &&
+             bauTi is > 0 and <= uint.MaxValue);
 
         if (!hasInventorySingleton)
         {

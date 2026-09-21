@@ -129,6 +129,12 @@ public sealed class Il2CppOffsetCacheTests
 
         Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? singletonError));
         Assert.Equal("missing inventory singleton: inv_klass_ti or bau_ti", singletonError);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols["gra"] = (long)uint.MaxValue + 1;
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? oversizedError));
+        Assert.Equal("missing or invalid critical symbol: gra", oversizedError);
     }
 
     [Fact]

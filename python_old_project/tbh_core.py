@@ -1100,19 +1100,19 @@ def _offsets_ok(got):
     """True somente para uma extracao que satisfaz o contrato READY v9 completo."""
     if not isinstance(got,dict): return False
     if got.get("jgc"): return False                       # generic jgc e semanticamente ambiguo
-    if not all(isinstance(got.get(k), int) and got[k] > 0 for k in _CRIT_SYMS): return False
+    if not all(type(got.get(k)) is int and 0 < got[k] <= 0xFFFFFFFF for k in _CRIT_SYMS): return False
     if not got.get("ra_class"): return False
     ynj=got.get("ynj")
-    if not isinstance(ynj,(list,tuple)) or not ynj or not all(isinstance(v,int) and v > 0 for v in ynj): return False
-    return bool((isinstance(got.get("inv_klass_ti"),int) and got["inv_klass_ti"] > 0) or
-                (isinstance(got.get("bau_ti"),int) and got["bau_ti"] > 0))   # singleton do inventario (1 dos 2)
+    if not isinstance(ynj,(list,tuple)) or not ynj or not all(type(v) is int and 0 < v <= 0xFFFFFFFF for v in ynj): return False
+    return bool((type(got.get("inv_klass_ti")) is int and 0 < got["inv_klass_ti"] <= 0xFFFFFFFF) or
+                (type(got.get("bau_ti")) is int and 0 < got["bau_ti"] <= 0xFFFFFFFF))   # singleton do inventario (1 dos 2)
 
 def _missing_syms(got):
     if not isinstance(got,dict): return list(_CRIT_SYMS)+["ra_class","ynj","inv_singleton"]
-    m=[k for k in _CRIT_SYMS if not isinstance(got.get(k),int) or got[k] <= 0]
+    m=[k for k in _CRIT_SYMS if type(got.get(k)) is not int or not (0 < got[k] <= 0xFFFFFFFF)]
     if not got.get("ra_class"): m.append("ra_class")
     ynj=got.get("ynj")
-    if not isinstance(ynj,(list,tuple)) or not ynj or not all(isinstance(v,int) and v > 0 for v in ynj): m.append("ynj")
+    if not isinstance(ynj,(list,tuple)) or not ynj or not all(type(v) is int and 0 < v <= 0xFFFFFFFF for v in ynj): m.append("ynj")
     if got.get("jgc"): m.append("generic_jgc_forbidden")
     if not (got.get("inv_klass_ti") or got.get("bau_ti")): m.append("inv_singleton")
     return m
