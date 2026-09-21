@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_SOURCE = ROOT / "python_old_project" / "tbh_core.py"
 CSHARP_SOURCE = ROOT / "src" / "TaskHeroX.Core" / "Il2Cpp" / "Il2CppOffsetCache.cs"
+SYMBOL_TABLE_SOURCE = ROOT / "src" / "TaskHeroX.Core" / "Il2Cpp" / "SymbolTable.cs"
 
 
 def stop(message: str) -> None:
@@ -53,9 +54,30 @@ def csharp_critical_symbols(source: str) -> list[str]:
     return values
 
 
+def python_extract_version(tree: ast.Module) -> int:
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "_EXTRACT_VER" for target in node.targets):
+            continue
+        if not isinstance(node.value, ast.Constant) or type(node.value.value) is not int:
+            stop("_EXTRACT_VER must be a literal integer")
+        return node.value.value
+    stop("_EXTRACT_VER assignment not found")
+    return -1
+
+
+def csharp_min_extract_version(source: str) -> int:
+    match = re.search(r"public\s+const\s+int\s+MinExtractVer\s*=\s*(\d+)\s*;", source)
+    if match is None:
+        stop("SymbolTable.MinExtractVer literal not found")
+    return int(match.group(1))
+
+
 def main() -> None:
     python_source = PYTHON_SOURCE.read_text(encoding="utf-8-sig")
     csharp_source = CSHARP_SOURCE.read_text(encoding="utf-8-sig")
+    symbol_table_source = SYMBOL_TABLE_SOURCE.read_text(encoding="utf-8-sig")
 
     try:
         tree = ast.parse(python_source, filename=str(PYTHON_SOURCE))
@@ -64,6 +86,11 @@ def main() -> None:
 
     python_keys = python_critical_symbols(python_source)
     csharp_keys = csharp_critical_symbols(csharp_source)
+    python_version = python_extract_version(tree)
+    csharp_version = csharp_min_extract_version(symbol_table_source)
+
+    if python_version != csharp_version:
+        stop(f"extractor version mismatch: Python={python_version} C#={csharp_version}")
 
     if len(python_keys) != len(set(python_keys)):
         stop("_CRIT_SYMS contains duplicates")
@@ -137,7 +164,7 @@ def main() -> None:
         stop("_offsets_ok rejects valid bau_ti singleton route")
 
     print(
-        f"[PASS] READY contract synced: {len(csharp_keys)} critical numeric keys; "
+        f"[PASS] READY v{csharp_version} contract synced: {len(csharp_keys)} critical numeric keys; "
         "Python syntax and acceptance semantics valid"
     )
 
