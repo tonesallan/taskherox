@@ -161,7 +161,7 @@ public sealed class Engine : IDisposable
         return Symbols.LoadOffsetsJson(stream, requireVersion: true);
     }
 
-    public bool LoadOffsetsFrom(string path, string source = "feed")
+    internal bool LoadOffsetsFrom(string path, string source = "feed")
     {
         if (!TryLoadReadyOffsets(path)) return false;
 
