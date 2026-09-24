@@ -68,6 +68,6 @@ Future versions should surface these states in a dedicated Compatibility Center.
 
 ## Naming rules
 
-Visible product strings use **TaskHeroX**. Internal legacy project names (`TbhBot.*`) may remain temporarily while project and namespace migration is performed in buildable stages.
+Visible product strings use **TaskHeroX**. Internal project names and namespaces use `TaskHeroX.*` after the staged migration.
 
 New public-facing files, releases, executables and updater identifiers should use `TaskHeroX` immediately.

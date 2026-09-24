@@ -1,0 +1,146 @@
+<Window x:Class="TaskHeroX.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="clr-namespace:TaskHeroX.App.Views"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="TaskHeroX" Height="900" Width="1260" MinWidth="1040" MinHeight="700"
+        WindowStartupLocation="CenterScreen" WindowStyle="None"
+        Background="{StaticResource Bg}" FontFamily="{StaticResource UI}"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0" GlassFrameThickness="0"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <PathGeometry x:Key="IcoTrainer" Figures="M12 2L2 22h20L12 2zm0 3.5l7 14.5H5l7-14.5z"/>
+        <PathGeometry x:Key="IcoInventory" Figures="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/>
+        <PathGeometry x:Key="IcoMarket" Figures="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.64-2.25 1.64-1.74 0-2.1-.96-2.11-1.66H8.1c.02 1.83 1.34 2.87 2.8 3.17V19h2.33v-1.7c1.64-.32 2.74-1.35 2.74-2.91-.01-1.7-1.33-2.67-3.66-3.25z"/>
+        <PathGeometry x:Key="IcoRunes" Figures="M12 2l-5.5 9h11zM6.5 12L1 21h11zm11 0l-5.5 9H23z"/>
+        <PathGeometry x:Key="IcoStages" Figures="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/>
+        <PathGeometry x:Key="IcoMin" Figures="M 0,5 H 11"/>
+        <PathGeometry x:Key="IcoClose" Figures="M 0,0 L 11,11 M 11,0 L 0,11"/>
+    </Window.Resources>
+
+    <Grid>
+        <v:ParticleBackground x:Name="Particles"/>
+
+        <Grid>
+            <Grid.Background>
+                <RadialGradientBrush GradientOrigin="0.86,0.02" Center="0.86,0.02" RadiusX="0.75" RadiusY="0.75">
+                    <GradientStop Color="#18FF7A18" Offset="0"/>
+                    <GradientStop Color="#0877D9FF" Offset="0.42"/>
+                    <GradientStop Color="#00000000" Offset="1"/>
+                </RadialGradientBrush>
+            </Grid.Background>
+        </Grid>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="274"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- TASKHEROX SIDEBAR -->
+            <Border Grid.Column="0" Background="{StaticResource Surf}" BorderBrush="{StaticResource Stroke}" BorderThickness="0,0,1,0">
+                <DockPanel Margin="0,20,0,0">
+                    <StackPanel DockPanel.Dock="Top" Margin="22,4,20,26">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="42" Height="42" CornerRadius="11">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#FF7A18" Offset="0"/>
+                                        <GradientStop Color="#FBBF24" Offset="0.55"/>
+                                        <GradientStop Color="#22D3EE" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.Effect><DropShadowEffect Color="#FF7A18" BlurRadius="18" ShadowDepth="0" Opacity="0.62"/></Border.Effect>
+                                <TextBlock Text="X" Foreground="Black" FontWeight="Bold" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+
+                            <StackPanel Margin="12,-1,0,0" VerticalAlignment="Center">
+                                <TextBlock Foreground="White" FontSize="22" FontWeight="Bold">
+                                    <Run Text="TaskHero"/><Run Text="X" Foreground="{StaticResource Acc}"/>
+                                </TextBlock>
+                                <TextBlock Text="CONTROL PLATFORM" Foreground="{StaticResource Subtle}" FontFamily="{StaticResource Mono}" FontSize="9" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{StaticResource Stroke}" Margin="0,18,0,0"/>
+                        <TextBlock Text="TASKBAR HERO // EXTERNAL TOOLKIT" Foreground="{StaticResource Subtle}"
+                                   FontFamily="{StaticResource Mono}" FontSize="9" Margin="2,11,0,0"/>
+                    </StackPanel>
+
+                    <!-- conexão -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="22,16,22,24">
+                        <Border BorderBrush="{StaticResource Stroke}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="ENGINE STATUS" Foreground="{StaticResource Subtle}" FontFamily="{StaticResource Mono}" FontSize="9" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Ellipse x:Name="ConnDot" Width="8" Height="8" Fill="{StaticResource Red}" VerticalAlignment="Center">
+                                        <Ellipse.Effect><DropShadowEffect x:Name="ConnDotGlow" Color="#FF2A55" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/></Ellipse.Effect>
+                                    </Ellipse>
+                                    <TextBlock x:Name="ConnLabel" Text="OFFLINE" Foreground="{StaticResource Red}" FontSize="13" FontWeight="SemiBold" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock x:Name="ConnDetails" Text="Aguardando conexão..." Foreground="{StaticResource Sub}" FontFamily="{StaticResource Mono}" FontSize="10" TextWrapping="Wrap"/>
+                                <Button x:Name="LaunchBtn" Style="{StaticResource LaunchButton}" Content="LAUNCH GAME" Margin="0,14,0,0" Click="OnLaunchGame"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- navegação -->
+                    <StackPanel Margin="14,0,10,0">
+                        <TextBlock Text="WORKSPACE" Foreground="{StaticResource Subtle}" FontFamily="{StaticResource Mono}" FontSize="9" Margin="10,0,0,8"/>
+                        <RadioButton x:Name="NavTrainer" Style="{StaticResource NavItem}" GroupName="nav" Content="Dashboard" Tag="{StaticResource IcoTrainer}" IsChecked="True" Checked="OnNav"/>
+                        <RadioButton x:Name="NavInventory" Style="{StaticResource NavItem}" GroupName="nav" Content="Inventory" Tag="{StaticResource IcoInventory}" Checked="OnNav"/>
+                        <RadioButton x:Name="NavMarket" Style="{StaticResource NavItem}" GroupName="nav" Content="Market Intel" Tag="{StaticResource IcoMarket}" Checked="OnNav"/>
+                        <RadioButton x:Name="NavRunes" Style="{StaticResource NavItem}" GroupName="nav" Content="Runes" Tag="{StaticResource IcoRunes}" Checked="OnNav"/>
+                        <RadioButton x:Name="NavStages" Style="{StaticResource NavItem}" GroupName="nav" Content="Stage Navigator" Tag="{StaticResource IcoStages}" Checked="OnNav"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- MAIN AREA -->
+            <DockPanel Grid.Column="1">
+                <Grid DockPanel.Dock="Top" Height="82" Background="Transparent" MouseLeftButtonDown="OnHeaderDrag">
+                    <StackPanel VerticalAlignment="Center" Margin="40,0,0,0">
+                        <TextBlock Text="TASKHEROX" Foreground="{StaticResource Acc}" FontFamily="{StaticResource Mono}" FontSize="9" FontWeight="Bold"/>
+                        <TextBlock x:Name="PageTitle" Text="Dashboard" Foreground="White" FontSize="30" FontWeight="Bold" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Border Background="{StaticResource Card2}" BorderBrush="{StaticResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,10,0">
+                            <TextBlock x:Name="StatusMini" Style="{StaticResource Sub.Text}" FontFamily="{StaticResource Mono}" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="145"/>
+                        </Border>
+                        <Button Content="COMPAT" Padding="10,6" Margin="0,0,8,0" Click="OnOpenCompatibility" ToolTip="Abre o Compatibility Center e executa diagnósticos somente-leitura."/>
+                        <Button x:Name="UnsafeStatsBtn" Content="UNSAFE: OFF" Padding="10,6" Margin="0,0,8,0" Click="OnUnsafeStats" ToolTip="Desativa temporariamente os limites seguros dos Neural Overrides. Não persiste entre reinicializações."/>
+                        <Button Content="RESTORE" Padding="10,6" Margin="0,0,8,0" Click="OnRestoreSession" ToolTip="Desliga automações/overrides, reverte cheats e restaura os stats capturados nesta sessão."/>
+                        <Button x:Name="ResetStatsBtn" Style="{StaticResource Accent.Button}" Content="RESET STATS" Padding="10,6" Margin="0,0,10,0" IsEnabled="False" Click="OnResetStats" ToolTip="Desliga os overrides e restaura os stats capturados no início desta sessão do jogo."/>
+                        <Button Style="{StaticResource ChromeButton}" Tag="{StaticResource IcoMin}" Click="OnMinimize"/>
+                        <Button Style="{StaticResource ChromeButton}" Tag="{StaticResource IcoClose}" Click="OnClose"/>
+                    </StackPanel>
+                </Grid>
+
+                <Border x:Name="UpdateBanner" DockPanel.Dock="Top" Visibility="Collapsed"
+                        Margin="40,0,40,16" Padding="18,14" CornerRadius="14"
+                        Background="#1AFBBF24" BorderBrush="#59FBBF24" BorderThickness="1">
+                    <DockPanel>
+                        <Button x:Name="UpdateBtn" DockPanel.Dock="Right" Margin="18,0,0,0"
+                                VerticalAlignment="Center" Style="{StaticResource Accent.Button}"
+                                Content="UPDATE TASKHEROX" Click="OnUpdateNow"/>
+                        <TextBlock DockPanel.Dock="Left" Text="⬆" FontSize="20" Margin="0,0,14,0"
+                                   VerticalAlignment="Center" Foreground="{StaticResource Amber}"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="UpdateTitle" Foreground="{StaticResource Amber}"
+                                       FontSize="14" FontWeight="SemiBold" Text="Atualização disponível"/>
+                            <TextBlock x:Name="UpdateDesc" Style="{StaticResource Sub.Text}"
+                                       Margin="0,3,0,0" TextWrapping="Wrap" Text=""/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <Grid x:Name="ContentHost" Margin="40,0,40,0"/>
+            </DockPanel>
+        </Grid>
+    </Grid>
+</Window>

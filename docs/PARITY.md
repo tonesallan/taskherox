@@ -5,7 +5,7 @@ tudo aqui estiver ✅ (ou conscientemente descartado).
 
 Legenda: ✅ feito · 🟡 parcial · ⏸ adiado (documentado) · ⚪ pendente
 
-> **FINAL — tudo implementado e testado ao vivo** (build `c824ed7a2bb1`): reads (stats/stage/cube/runas/inv/batch 233x), cheats **ACTk + Godmode** (hitkill/speed **removidos** a pedido), escritas (stats/stage/rune/cube/maxstage), market, **dispatcher main-thread**, e as 3 automações: **auto-box** (abre caixas via llx), **auto-stash** (move pro baú via iw), **auto-fuse** (fundiu 9 Material common → 1). E2E core 19/19, testes 14/14. Harness: `--e2e`, `--dispatch`, `--autobox`, `--stash`, `--fuse [--go]`.
+> **Estado validado**: além da paridade histórica já registrada no build `c824ed7a2bb1`, o pipeline de **auto-offset C#** foi validado no build `7fc7437300cf`: extração real C# = Python legado nos símbolos críticos; fallback embutido gera cache v9; e o caminho `feed sem offsets -> auto-offset C# -> LoadOffsetsFrom -> OffsetsLoaded=True` foi exercitado ao vivo com o jogo permanecendo aberto.
 
 ## Engine (núcleo)
 | Recurso | Python | C# | Nota |
@@ -14,7 +14,7 @@ Legenda: ✅ feito · 🟡 parcial · ⏸ adiado (documentado) · ⚪ pendente
 | Leitura de memória | 1 syscall/leitura | ✅ **batch** | `MemoryAccess.ReadArray<T>` — **~200x** ao vivo |
 | AOB scan | ✅ | ✅ | `MemoryScanner` |
 | Offsets por build (conhecido) | ✅ | ✅ | `KnownBuilds` + `LoadOffsetsJson` (cache do Python) |
-| Auto-offset por **dump** (build novo) | ✅ | ⏸ | o loader de JSON cobre builds já resolvidos |
+| Auto-offset por **dump** (build novo) | ✅ | ✅ | C# integrado: known/cache/embedded -> feed -> fallback local fail-closed; validado ao vivo no build `7fc7437300cf` |
 | ObscuredInt (ACTk) | ✅ | ✅ | `ObscuredValue` |
 | Cheats: ACTk/God/Hitkill/Speed | ✅ | ✅ | `Cheats` (portado fiel; validar ao vivo) |
 | Stats (25) ler/aplicar | ✅ | ✅ | `StatEditor` |
@@ -42,12 +42,11 @@ Legenda: ✅ feito · 🟡 parcial · ⏸ adiado (documentado) · ⚪ pendente
 | Auto-update (troca o exe) | ✅ | ✅ | `Update/AutoUpdate` (trilho de release C#) |
 | Publish single-file | ✅ | ✅ | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true` |
 | **Price overlay (OCR)** | ✅ | ⏸ | opcional; ver abaixo |
-| Testes | — | ✅ | `tests/TbhBot.Tests` (ObscuredValue/GameConstants/SymbolTable) |
+| Testes | — | ✅ | `tests/TaskHeroX.Tests` (ObscuredValue/GameConstants/SymbolTable) |
 
 ## Adiados — por quê e o que falta
 1. **Dispatcher main-thread** (code-cave em `InputManager.Update`): precisa disassembler (Iced) + shellcode +
    suspend/resume + iteração AO VIVO. Desbloqueia auto-box/stash/fuse. Ver `Game/DISPATCHER_PORT_NOTES.md`.
-2. **Extração de offsets por dump**: para builds ainda não resolvidos pelo Python. O `LoadOffsetsJson` é a ponte.
 3. **Rune defs (RuneInfoData)**: nomes/ícones/conexões/nível-máximo da árvore de runas. Sem isso a aba Runes é
    lista + unlock nível-1 (seguro). Portar = ler `RuneInfoData` (klass scan) como no Python.
 4. **Price overlay OCR** (`tbh_overlay.py`): janela layered topmost + `Windows.Media.Ocr` + detecção de hover.

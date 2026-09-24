@@ -1,12 +1,12 @@
 # 01 — Sistema de Design / Tema (tokens)
 
-> Fonte da verdade para o **redesign** do painel WPF do TaskbarHero (projeto `tbh_sharp`, `TbhBot.App`).
+> Fonte da verdade para o **redesign** do painel WPF do TaskbarHero (projeto `tbh_sharp`, `TaskHeroX.App`).
 > Este doc descreve o **tema atual** (cores, fontes, estilos nomeados) e **onde/como cada token é usado**.
 > Arquivos de origem:
-> - `src/TbhBot.App/Theme/Dark.xaml` — o dicionário de recursos (todos os tokens)
-> - `src/TbhBot.App/App.xaml` — faz o merge de `Theme/Dark.xaml` em `Application.Resources` (tema global, único, sempre dark)
-> - `src/TbhBot.App/MainWindow.xaml` (+ `.cs`) — shell (header, abas, status bar)
-> - `src/TbhBot.App/Views/*.cs` — as 5 abas montam UI **em C# no code-behind** e puxam os tokens via `FindResource`
+> - `src/TaskHeroX.App/Theme/Dark.xaml` — o dicionário de recursos (todos os tokens)
+> - `src/TaskHeroX.App/App.xaml` — faz o merge de `Theme/Dark.xaml` em `Application.Resources` (tema global, único, sempre dark)
+> - `src/TaskHeroX.App/MainWindow.xaml` (+ `.cs`) — shell (header, abas, status bar)
+> - `src/TaskHeroX.App/Views/*.cs` — as 5 abas montam UI **em C# no code-behind** e puxam os tokens via `FindResource`
 
 ---
 

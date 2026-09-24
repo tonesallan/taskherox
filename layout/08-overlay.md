@@ -4,12 +4,12 @@
 > lendo só este doc, sem adivinhar comportamento.
 >
 > Código real:
-> - `src/TbhBot.App/Services/OverlayService.cs` — o motor (timer, captura, OCR, casamento, badge).
-> - `src/TbhBot.App/Services/OverlayWindow.cs` — a janela topmost transparente click-through.
-> - `src/TbhBot.App/Services/Native.cs` — P/Invoke (cursor, enum de janelas, captura GDI).
-> - `src/TbhBot.Core/Market/PriceIndex.cs` — índice de preços embutido (base→grade→USD).
-> - `src/TbhBot.App/Views/MarketView.cs` — **onde vive o toggle** (aba "Market").
-> - `src/TbhBot.App/Theme/Dark.xaml` — tema (brushes/estilos do painel; o badge NÃO usa o tema).
+> - `src/TaskHeroX.App/Services/OverlayService.cs` — o motor (timer, captura, OCR, casamento, badge).
+> - `src/TaskHeroX.App/Services/OverlayWindow.cs` — a janela topmost transparente click-through.
+> - `src/TaskHeroX.App/Services/Native.cs` — P/Invoke (cursor, enum de janelas, captura GDI).
+> - `src/TaskHeroX.Core/Market/PriceIndex.cs` — índice de preços embutido (base→grade→USD).
+> - `src/TaskHeroX.App/Views/MarketView.cs` — **onde vive o toggle** (aba "Market").
+> - `src/TaskHeroX.App/Theme/Dark.xaml` — tema (brushes/estilos do painel; o badge NÃO usa o tema).
 
 ---
 
@@ -202,7 +202,7 @@ tema — todas as cores são hardcoded (ver tabela §3a). Significado das cores:
   decide texto/cor.
 - `event Action<string>? Log` → texto para a barra de status.
 
-### `PriceIndex` (`TbhBot.Core.Market`) — índice embutido, offline
+### `PriceIndex` (`TaskHeroX.Core.Market`) — índice embutido, offline
 - `Count` → nº de bases no índice (usado como guarda no `Toggle`).
 - `ResolveBase(IEnumerable<string> texts)` → dentre as linhas candidatas (as acima da grade), devolve a
   base conhecida: **match exato ganha na hora**; senão **fuzzy** (LCS ≈ `SequenceMatcher.ratio`) com

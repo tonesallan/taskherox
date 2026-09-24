@@ -1083,18 +1083,39 @@ def _data_anchors(ddir):
 # e nao estiverem aqui, o auto-fuse so nao AUTO-ABRE o cubo (degradacao graciosa) — o resto auto-resolve.
 _KNOWN_UI_HANDLERS={"c824ed7a2bb1":{"eby":0x839BB0,"hgr":0xC362A0}}
 
-_EXTRACT_VER=8   # BUMPAR sempre que a extracao mudar: invalida os caches antigos. Sem isso um offset
+_EXTRACT_VER=9   # BUMPAR sempre que a extracao mudar: invalida os caches antigos. Sem isso um offset
                  # errado fica gravado no disco e o fix nao chega em quem ja rodou o painel.
-_CRIT_SYMS=("gra","upd","llx","iw","ra_class","ilo","ipu","imx","inf","ili","iog","ioa","ima","iuw","izb","inv_slots_off","stash_off")
+# Contrato READY v9: manter em paridade com Il2CppOffsetCache.CriticalNumericSymbols no C#.
+# O Python legado so pode CARIMBAR _ver=9 quando TODOS estes anchors forem resolvidos para a build atual.
+_CRIT_SYMS=(
+    "gra","upd","llx","iw","ilo","ipu","imx","inf","ili","iog","ioa","ima","iuw","izb",
+    "inv_psd_off","inv_slots_off","stash_off","inv_list_off","PlayerSaveData.RuneSaveData",
+    "itemsave_key","iteminfo_type","iteminfo_grade","iteminfo_synth","iteminfo_level",
+    "psd_common_off","commonsave_usestorage","commonsave_maxstage","commonsave_curstage","CommonSaveData.currentStageWave",
+    "uo_ti","uo_dict","uo_max","uo_cur","uo_wave","bal_ti","stage_off","jgk","jgd",
+    "uimgr_ti","uimain","eby",
+    "cube_grade","cube_bers","cube_inlist","cube_active","cube_busy","cube_type","cube_lvrecipe","cube_level_off",
+)
 def _offsets_ok(got):
-    """True se o dict tem TODOS os simbolos criticos (nao aceita extracao parcial que quebra features)."""
+    """True somente para uma extracao que satisfaz o contrato READY v9 completo."""
     if not isinstance(got,dict): return False
-    if not all(got.get(k) for k in _CRIT_SYMS): return False
-    return bool(got.get("inv_klass_ti") or got.get("bau_ti"))   # singleton do inventario (1 dos 2)
+    if "jgc" in got: return False                         # generic jgc e semanticamente ambiguo
+    if not all(type(got.get(k)) is int and 0 < got[k] <= 0xFFFFFFFF for k in _CRIT_SYMS): return False
+    if not isinstance(got.get("ra_class"),str) or not got["ra_class"].strip(): return False
+    ynj=got.get("ynj")
+    if not isinstance(ynj,(list,tuple)) or not ynj or not all(type(v) is int and 0 < v <= 0xFFFFFFFF for v in ynj): return False
+    return bool((type(got.get("inv_klass_ti")) is int and 0 < got["inv_klass_ti"] <= 0xFFFFFFFF) or
+                (type(got.get("bau_ti")) is int and 0 < got["bau_ti"] <= 0xFFFFFFFF))   # singleton do inventario (1 dos 2)
 
 def _missing_syms(got):
-    m=[k for k in _CRIT_SYMS if not (isinstance(got,dict) and got.get(k))]
-    if isinstance(got,dict) and not (got.get("inv_klass_ti") or got.get("bau_ti")): m.append("inv_singleton")
+    if not isinstance(got,dict): return list(_CRIT_SYMS)+["ra_class","ynj","inv_singleton"]
+    m=[k for k in _CRIT_SYMS if type(got.get(k)) is not int or not (0 < got[k] <= 0xFFFFFFFF)]
+    if not isinstance(got.get("ra_class"),str) or not got["ra_class"].strip(): m.append("ra_class")
+    ynj=got.get("ynj")
+    if not isinstance(ynj,(list,tuple)) or not ynj or not all(type(v) is int and 0 < v <= 0xFFFFFFFF for v in ynj): m.append("ynj")
+    if "jgc" in got: m.append("generic_jgc_forbidden")
+    if not ((type(got.get("inv_klass_ti")) is int and 0 < got["inv_klass_ti"] <= 0xFFFFFFFF) or
+            (type(got.get("bau_ti")) is int and 0 < got["bau_ti"] <= 0xFFFFFFFF)): m.append("inv_singleton")
     return m
 
 def resolve_symbols(log=lambda m:None):

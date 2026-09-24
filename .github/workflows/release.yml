@@ -46,15 +46,15 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore TbhBot.slnx
+        run: dotnet restore TaskHeroX.slnx
 
       - name: Test
-        run: dotnet test TbhBot.slnx -c Release --no-restore
+        run: dotnet test TaskHeroX.slnx -c Release --no-restore
 
       - name: Publish single-file TaskHeroX
         shell: pwsh
         run: |
-          dotnet publish src/TbhBot.App/TbhBot.App.csproj `
+          dotnet publish src/TaskHeroX.App/TaskHeroX.App.csproj `
             -c Release `
             -r win-x64 `
             --self-contained true `

@@ -44,13 +44,13 @@ The migration is intentionally recoverable:
 ## Structure
 
 ```text
-TbhBot.slnx                  current solution name; scheduled for staged rename
+TaskHeroX.slnx                  current solution name; scheduled for staged rename
 Directory.Build.props        shared build metadata
 src/
-  TbhBot.Core/               process, memory, IL2CPP, game features and automation
-  TbhBot.App/                WPF desktop application
-tools/TbhBot.Cli/            diagnostics, E2E harness and benchmarks
-tests/TbhBot.Tests/          automated tests
+  TaskHeroX.Core/               process, memory, IL2CPP, game features and automation
+  TaskHeroX.App/                WPF desktop application
+tools/TaskHeroX.Cli/            diagnostics, E2E harness and benchmarks
+tests/TaskHeroX.Tests/          automated tests
 offsets/                     public build-offset feed
 layout/                      UI specifications and prototypes
 docs/                        architecture, compatibility and TaskHeroX design notes
@@ -66,8 +66,8 @@ Requires the **.NET 10 SDK** on Windows x64.
 ```powershell
 dotnet build
 dotnet test
-dotnet run --project src\TbhBot.App
-dotnet run --project tools\TbhBot.Cli -- --e2e --offsets "src\TbhBot.Core\Offsets"
+dotnet run --project src\TaskHeroX.App
+dotnet run --project tools\TaskHeroX.Cli -- --e2e --offsets "src\TaskHeroX.Core\Offsets"
 ```
 
 For a self-contained executable:

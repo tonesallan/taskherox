@@ -1,0 +1,232 @@
+using TaskHeroX.Core.Il2Cpp;
+
+namespace TaskHeroX.Tests;
+
+public sealed class Il2CppOffsetCacheTests
+{
+    [Fact]
+    public void TryValidate_AcceptsLegacyCriticalContractWithoutGenericJgc()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+
+        bool ok = Il2CppOffsetCache.TryValidate(offsets, out string? error);
+
+        Assert.True(ok, error);
+    }
+
+    [Fact]
+    public void TryValidate_RejectsGenericJgc()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        offsets.Symbols["jgc"] = 0x1234;
+
+        bool ok = Il2CppOffsetCache.TryValidate(offsets, out string? error);
+
+        Assert.False(ok);
+        Assert.Equal("generic jgc is forbidden", error);
+    }
+
+    [Fact]
+    public void TryValidate_RejectsMissingInventorySingleton()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("inv_klass_ti");
+
+        bool ok = Il2CppOffsetCache.TryValidate(offsets, out string? error);
+
+        Assert.False(ok);
+        Assert.Equal("missing inventory singleton: inv_klass_ti or bau_ti", error);
+    }
+
+    [Fact]
+    public void TryValidate_RejectsMissingRuntimeRequiredAnchors()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("eby");
+
+        bool ok = Il2CppOffsetCache.TryValidate(offsets, out string? error);
+
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: eby", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Ynj.Clear();
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: ynj", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("cube_grade");
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: cube_grade", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("jgk");
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: jgk", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("inv_list_off");
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: inv_list_off", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("PlayerSaveData.RuneSaveData");
+
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: PlayerSaveData.RuneSaveData", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("commonsave_usestorage");
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: commonsave_usestorage", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("commonsave_maxstage");
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: commonsave_maxstage", error);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols.Remove("iteminfo_synth");
+        ok = Il2CppOffsetCache.TryValidate(offsets, out error);
+        Assert.False(ok);
+        Assert.Equal("missing or invalid critical symbol: iteminfo_synth", error);
+    }
+
+    [Fact]
+    public void TryValidate_RejectsNonPositiveCriticalValues()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        offsets.Symbols["gra"] = -1;
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? graError));
+        Assert.Equal("missing or invalid critical symbol: gra", graError);
+
+        offsets = CreateValidOffsets();
+        offsets.Ynj.Clear();
+        offsets.Ynj.Add(-1);
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? ynjError));
+        Assert.Equal("missing or invalid critical symbol: ynj", ynjError);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols["inv_klass_ti"] = -1;
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? singletonError));
+        Assert.Equal("missing inventory singleton: inv_klass_ti or bau_ti", singletonError);
+
+        offsets = CreateValidOffsets();
+        offsets.Symbols["gra"] = (long)uint.MaxValue + 1;
+
+        Assert.False(Il2CppOffsetCache.TryValidate(offsets, out string? oversizedError));
+        Assert.Equal("missing or invalid critical symbol: gra", oversizedError);
+    }
+
+    [Fact]
+    public void TryValidateSerialized_UsesTheSameReadyContract()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        string ready = Il2CppOffsetCache.Serialize(offsets);
+
+        Assert.True(
+            Il2CppOffsetCache.TryValidateSerialized(System.Text.Encoding.UTF8.GetBytes(ready), out string? readyError),
+            readyError);
+
+        byte[] partial = System.Text.Encoding.UTF8.GetBytes(
+            $"{{\"_ver\":{SymbolTable.MinExtractVer},\"gra\":1}}");
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(partial, out string? partialError));
+        Assert.Equal("missing or invalid critical symbol: upd", partialError);
+
+        byte[] old = System.Text.Encoding.UTF8.GetBytes(ready.Replace(
+            $"\"_ver\":{SymbolTable.MinExtractVer}",
+            $"\"_ver\":{SymbolTable.MinExtractVer - 1}",
+            StringComparison.Ordinal));
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(old, out string? oldError));
+        Assert.Equal($"cache version must be >= {SymbolTable.MinExtractVer}", oldError);
+
+        byte[] genericJgc = System.Text.Encoding.UTF8.GetBytes(ready.Replace(
+            "{",
+            "{\"jgc\":4660,",
+            StringComparison.Ordinal));
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(genericJgc, out string? jgcError));
+        Assert.Equal("generic jgc is forbidden", jgcError);
+
+        byte[] malformedYnj = System.Text.Encoding.UTF8.GetBytes(ready.Replace(
+            "\"ynj\":[4660]",
+            "\"ynj\":[4660,\"junk\"]",
+            StringComparison.Ordinal));
+        Assert.False(Il2CppOffsetCache.TryValidateSerialized(malformedYnj, out string? ynjElementError));
+        Assert.Equal("invalid ynj element", ynjElementError);
+    }
+
+    [Fact]
+    public void Serialize_IsDeterministicAndLoadableBySymbolTable()
+    {
+        Il2CppExtractedOffsets offsets = CreateValidOffsets();
+        offsets.Symbols["z_extra"] = 99;
+        offsets.Symbols["a_extra"] = 11;
+        offsets.Ynj.AddRange([0x1000, 0x2000]);
+        offsets.InvClass = "InventoryConcrete";
+
+        string first = Il2CppOffsetCache.Serialize(offsets);
+        string second = Il2CppOffsetCache.Serialize(offsets);
+
+        Assert.Equal(first, second);
+        Assert.Contains($"\"_ver\":{SymbolTable.MinExtractVer}", first, StringComparison.Ordinal);
+        Assert.True(first.IndexOf("\"a_extra\"", StringComparison.Ordinal) <
+                    first.IndexOf("\"z_extra\"", StringComparison.Ordinal));
+        Assert.DoesNotContain("\"jgc\"", first, StringComparison.Ordinal);
+
+        var table = new SymbolTable();
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(first));
+        Assert.True(table.LoadOffsetsJson(stream, requireVersion: true));
+        Assert.Equal(11, table.Get("a_extra"));
+        Assert.Equal([0x1234L, 0x1000L, 0x2000L], table.Ynj);
+        Assert.Equal("InventoryConcrete", table.InvClass);
+        Assert.Equal("MoveItemsManager", table.RaClass);
+    }
+
+    private static Il2CppExtractedOffsets CreateValidOffsets()
+    {
+        var offsets = new Il2CppExtractedOffsets
+        {
+            RaClass = "MoveItemsManager",
+        };
+
+        foreach (string key in new[]
+        {
+            "gra", "upd", "llx", "iw", "ilo", "ipu", "imx", "inf", "ili", "iog", "ioa",
+            "ima", "iuw", "izb",
+            "inv_psd_off", "inv_slots_off", "stash_off", "inv_list_off", "PlayerSaveData.RuneSaveData",
+            "itemsave_key", "iteminfo_type", "iteminfo_grade", "iteminfo_synth", "iteminfo_level",
+            "psd_common_off", "commonsave_usestorage", "commonsave_maxstage", "commonsave_curstage",
+            "CommonSaveData.currentStageWave",
+            "uo_ti", "uo_dict", "uo_max", "uo_cur", "uo_wave", "bal_ti", "stage_off", "jgk", "jgd",
+            "uimgr_ti", "uimain", "eby",
+            "cube_grade", "cube_bers", "cube_inlist", "cube_active",
+            "cube_busy", "cube_type", "cube_lvrecipe", "cube_level_off",
+        })
+        {
+            offsets.Symbols[key] = 1;
+        }
+
+        offsets.Symbols["inv_klass_ti"] = 2;
+        offsets.Ynj.Add(0x1234);
+        return offsets;
+    }
+}
