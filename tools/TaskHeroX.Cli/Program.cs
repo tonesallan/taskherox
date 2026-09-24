@@ -15,6 +15,227 @@ if (args.Length >= 2 && args[0] == "--verify-offsets")
     return;
 }
 
+// Smoke read-only do MESMO caminho de recuperação usado pelo aplicativo:
+// Attach -> known/cache/embedded já tentados -> feed -> fallback C# -> LoadOffsetsFrom.
+// O cache pode ser direcionado para TEMP para não tocar o cache normal do app.
+// Uso: --recover-unknown-build [output.json]
+if (args.Length >= 1 && args[0] == "--recover-unknown-build")
+{
+    using var recovery = new TaskHeroX.Core.Engine();
+    recovery.Log += m => Console.WriteLine("  [engine] " + m);
+
+    if (!recovery.Attach())
+    {
+        Console.WriteLine("[FAIL] jogo nao esta aberto");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    string? hash = recovery.BuildHash;
+    Console.WriteLine($"pid={recovery.Target.ProcessId}");
+    Console.WriteLine($"build={hash ?? "?"}");
+    Console.WriteLine($"offsets antes={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "-"}");
+
+    if (string.IsNullOrWhiteSpace(hash))
+    {
+        Console.WriteLine("[FAIL] build hash indisponivel");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (recovery.OffsetsLoaded)
+    {
+        Console.WriteLine("[FAIL] este build ja foi resolvido antes do recovery; teste de build desconhecido ficou inconclusivo");
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    string output = args.Length >= 2
+        ? Path.GetFullPath(args[1])
+        : Path.Combine(Path.GetTempPath(), $"TaskHeroX-offsets-{hash}-engine-recovery.json");
+
+    if (File.Exists(output))
+        File.Delete(output);
+
+    Console.WriteLine($"cache de teste={output}");
+    Console.WriteLine("[1/2] executando Engine.RecoverUnknownBuildOffsetsAsync...");
+
+    bool recovered = await recovery.RecoverUnknownBuildOffsetsAsync(
+        cachePathOverride: output);
+
+    Console.WriteLine($"[2/2] recovered={recovered} offsets={recovery.OffsetsLoaded} source={recovery.OffsetsSource ?? "-"}");
+
+    if (!recovered || !recovery.OffsetsLoaded)
+    {
+        Console.WriteLine("[FAIL] Engine nao recuperou offsets");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (!string.Equals(
+            recovery.OffsetsSource,
+            TaskHeroX.Core.Engine.AutoExtractOffsetsSource,
+            StringComparison.Ordinal))
+    {
+        Console.WriteLine($"[FAIL] fonte inesperada: {recovery.OffsetsSource ?? "-"}");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (!File.Exists(output))
+    {
+        Console.WriteLine("[FAIL] fallback nao persistiu o cache de teste");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    if (recovery.Symbols.Has("jgc"))
+    {
+        Console.WriteLine("[FAIL] generic jgc carregado");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine($"  gra        0x{recovery.Symbols.Get("gra"):X}");
+    Console.WriteLine($"  upd        0x{recovery.Symbols.Get("upd"):X}");
+    Console.WriteLine($"  iw         0x{recovery.Symbols.Get("iw"):X}");
+    Console.WriteLine($"  uo_max     0x{recovery.Symbols.Get("uo_max"):X}");
+    Console.WriteLine($"  uo_cur     0x{recovery.Symbols.Get("uo_cur"):X}");
+    Console.WriteLine($"  uo_wave    0x{recovery.Symbols.Get("uo_wave"):X}");
+    Console.WriteLine($"  generic jgc? {recovery.Symbols.Has("jgc")}");
+    Console.WriteLine($"  jogo vivo? {recovery.Target.IsAlive()}");
+    Console.WriteLine("[PASS] Engine unknown-build recovery concluido");
+    return;
+}
+
+// Smoke do fallback que o app usa para build desconhecido: usa o Il2CppDumper EMBUTIDO no Core,
+// revalida o hash antes/depois da extração e só persiste um cache aceito pelo SymbolTable.
+// Uso: --auto-offset-fallback <GameAssembly.dll> [output.json]
+if (args.Length >= 2 && args[0] == "--auto-offset-fallback")
+{
+    string gameAssembly = Path.GetFullPath(args[1]);
+    string? hash = TaskHeroX.Core.Il2Cpp.BuildInfo.DllHash(gameAssembly);
+    if (string.IsNullOrWhiteSpace(hash))
+    {
+        Console.WriteLine("[FAIL] nao consegui calcular o build hash");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    string output = args.Length >= 3
+        ? Path.GetFullPath(args[2])
+        : Path.Combine(Path.GetTempPath(), $"TaskHeroX-offsets-{hash}-bundled-fallback.json");
+
+    Console.WriteLine($"build={hash}");
+    Console.WriteLine($"output={output}");
+    Console.WriteLine("[1/2] executando fallback com Il2CppDumper embutido...");
+
+    TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallbackResult result =
+        await TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetFallback.TryGenerateAsync(
+            hash,
+            gameAssembly,
+            output);
+
+    if (!result.Success)
+    {
+        Console.WriteLine("[FAIL] " + (result.Error ?? "falha desconhecida"));
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    var probe = new TaskHeroX.Core.Il2Cpp.SymbolTable();
+    if (!probe.LoadOffsetsJson(result.CachePath!, requireVersion: true) || probe.Has("jgc"))
+    {
+        Console.WriteLine("[FAIL] cache persistido foi rejeitado na leitura final");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    Console.WriteLine("[2/2] cache versionado recarregado");
+    Console.WriteLine($"  gra        0x{probe.Get("gra"):X}");
+    Console.WriteLine($"  upd        0x{probe.Get("upd"):X}");
+    Console.WriteLine($"  iw         0x{probe.Get("iw"):X}");
+    Console.WriteLine($"  uo_max     0x{probe.Get("uo_max"):X}");
+    Console.WriteLine($"  uo_cur     0x{probe.Get("uo_cur"):X}");
+    Console.WriteLine($"  uo_wave    0x{probe.Get("uo_wave"):X}");
+    Console.WriteLine($"  generic jgc? {probe.Has("jgc")}");
+    Console.WriteLine("[PASS] bundled auto-offset fallback concluido");
+    return;
+}
+
+// Extração C# opt-in: executa Il2CppDumper -> extrator -> validação -> JSON sem alterar o Engine.
+// Uso:
+//   --extract-offsets <Il2CppDumper.exe> <GameAssembly.dll> <global-metadata.dat> [expected.json] [output.json]
+// Se expected.json for informado, compara semanticamente com um cache histórico; o alias jgc -> jgc_type13
+// é tratado pelo comparador sem reintroduzir generic jgc na saída nova.
+if (args.Length >= 4 && args[0] == "--extract-offsets")
+{
+    var inputs = new TaskHeroX.Core.Il2Cpp.Il2CppDumperInputs(args[1], args[2], args[3]);
+
+    try
+    {
+        Console.WriteLine("[1/3] executando pipeline C# de auto-offset...");
+        var result = await TaskHeroX.Core.Il2Cpp.Il2CppAutoOffsetPipeline.RunAsync(inputs);
+
+        Console.WriteLine("[2/3] extração validada");
+        foreach (string key in new[]
+        {
+            "gra", "upd", "llx", "iw", "iuw", "izb",
+            "uo_ti", "uo_dict", "uo_cur_cache", "uo_max", "uo_cur", "uo_wave",
+            "jgk", "jgq", "jgd", "jgc_type13", "jgc_type2",
+            "inv_slots_off", "stash_off", "inv_psd_off", "inv_list_off"
+        })
+        {
+            if (result.Offsets.Symbols.TryGetValue(key, out long value))
+                Console.WriteLine($"  {key,-20} 0x{value:X}");
+        }
+
+        Console.WriteLine($"  inv_class            {result.Offsets.InvClass ?? "—"}");
+        Console.WriteLine($"  ra_class             {result.Offsets.RaClass ?? "—"}");
+        Console.WriteLine($"  generic jgc?         {result.Offsets.Symbols.ContainsKey("jgc")}");
+
+        if (args.Length >= 5 && File.Exists(args[4]))
+        {
+            string expected = await File.ReadAllTextAsync(args[4]);
+            TaskHeroX.Core.Il2Cpp.Il2CppOffsetParityReport parity =
+                TaskHeroX.Core.Il2Cpp.Il2CppOffsetParityComparer.Compare(result.Offsets, expected);
+
+            if (!parity.IsMatch)
+            {
+                Console.WriteLine("[FAIL] divergências contra o cache esperado:");
+                foreach (var mismatch in parity.Mismatches)
+                    Console.WriteLine(
+                        $"  {mismatch.GeneratedKey}={mismatch.GeneratedValue ?? "—"} " +
+                        $"!= {mismatch.ExpectedKey}={mismatch.ExpectedValue ?? "—"}");
+                Environment.ExitCode = 2;
+                return;
+            }
+
+            Console.WriteLine("[PASS] paridade com o cache esperado");
+        }
+
+        if (args.Length >= 6)
+        {
+            string output = Path.GetFullPath(args[5]);
+            await File.WriteAllTextAsync(output, result.CacheJson);
+            Console.WriteLine($"[3/3] JSON gerado: {output}");
+        }
+        else
+        {
+            Console.WriteLine("[3/3] JSON validado em memória (nenhum arquivo gravado)");
+        }
+
+        Console.WriteLine("[PASS] pipeline C# concluído sem alterar o runtime");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("[FAIL] " + ex.Message);
+        Environment.ExitCode = 1;
+    }
+
+    return;
+}
+
 // Verifica que os offsets estão EMBUTIDOS no assembly do Core e carregam (não precisa do jogo).
 if (args.Contains("--verify-embedded"))
 {

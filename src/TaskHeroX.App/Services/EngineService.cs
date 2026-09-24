@@ -63,11 +63,12 @@ public sealed class EngineService
                 Post(() => StateChanged?.Invoke());
             }
 
-            // Build desconhecida: tenta buscar offsets no feed público do TaskHeroX uma vez por hash.
+            // Build desconhecida: uma tentativa por hash. A própria Engine preserva a ordem
+            // known/cache/embedded -> feed -> auto-extração C# fail-closed.
             if (now && !Engine.OffsetsLoaded && Engine.BuildHash is { Length: > 0 } h && _feedTried != h)
             {
                 _feedTried = h;
-                _ = FetchOffsetsAsync(h, ct);
+                _ = RecoverOffsetsAsync(h, ct);
             }
             try { await Task.Delay(1000, ct).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
@@ -76,11 +77,27 @@ public sealed class EngineService
 
     private string? _feedTried;
 
-    private async Task FetchOffsetsAsync(string hash, CancellationToken ct)
+    private async Task RecoverOffsetsAsync(string hash, CancellationToken ct)
     {
-        var path = await TaskHeroX.Core.Update.OffsetsFeed.TryFetchAsync(hash, ct).ConfigureAwait(false);
-        if (path is null || ct.IsCancellationRequested) return;
-        if (Engine.LoadOffsetsFrom(path)) Post(() => StateChanged?.Invoke());
+        bool recovered;
+        try
+        {
+            recovered = await Engine.RecoverUnknownBuildOffsetsAsync(
+                cancellationToken: ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            RaiseLog($"recuperação de offsets falhou: {ex.Message}");
+            return;
+        }
+
+        if (recovered &&
+            string.Equals(Engine.BuildHash, hash, StringComparison.OrdinalIgnoreCase))
+            Post(() => StateChanged?.Invoke());
     }
 
     /// <summary>

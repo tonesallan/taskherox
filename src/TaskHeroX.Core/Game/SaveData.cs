@@ -17,8 +17,8 @@ public sealed class SaveData(
     SymbolTable sym,
     Il2CppResolver resolver)
 {
-    private const int CubeLevelOffFallback = 0x1CC;
-    private int CubeLevelOff => (int)(sym.Has("cube_level_off") ? sym.Get("cube_level_off") : CubeLevelOffFallback);
+    // Write-sensitive: nao herdar offset de Cube de outra build.
+    private int CubeLevelOff => (int)sym.Get("cube_level_off");
     public const int StageMaxKey = 4310;
     public const int CubeMaxLevel = 100;
 
@@ -120,17 +120,21 @@ public sealed class SaveData(
 
     public int? CubeLevel()
     {
+        int off = CubeLevelOff;
+        if (off == 0) return null;
         nint sf = CubeStaticFields();
-        return sf == 0 ? null : ObscuredValue.ReadInt(mem, sf + CubeLevelOff);
+        return sf == 0 ? null : ObscuredValue.ReadInt(mem, sf + off);
     }
 
     public (bool Ok, int Level) SetCubeLevel(int level = CubeMaxLevel)
     {
+        int off = CubeLevelOff;
+        if (off == 0) return (false, level);
         nint sf = CubeStaticFields();
         if (sf == 0) return (false, level);
-        int? cur = ObscuredValue.ReadInt(mem, sf + CubeLevelOff);
+        int? cur = ObscuredValue.ReadInt(mem, sf + off);
         if (cur is null or < 0 or > CubeMaxLevel + 50) return (false, level);
-        return (ObscuredValue.WriteInt(mem, sf + CubeLevelOff, level), level);
+        return (ObscuredValue.WriteInt(mem, sf + off, level), level);
     }
 
     // ---------------- RUNAS ----------------

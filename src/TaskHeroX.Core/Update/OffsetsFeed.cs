@@ -11,7 +11,7 @@ namespace TaskHeroX.Core.Update;
 /// Falha em silêncio (sem rede / build ainda não publicado): o painel só segue no modo degradado
 /// (cheats por AOB) e o banner explica o porquê.
 /// </summary>
-public static class OffsetsFeed
+internal static class OffsetsFeed
 {
     /// <summary>Raiz crua do repo — a pasta <c>offsets/</c> guarda um <c>offsets_&lt;hash&gt;.json</c> por build.</summary>
     public const string BaseUrl = "https://raw.githubusercontent.com/matheusbranhann/taskbarhero-bot/main/offsets";
@@ -46,21 +46,72 @@ public static class OffsetsFeed
             var body = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
             if (body.Length is < 512 or > 4_000_000) return null; // tamanho fora do plausível -> não é o arquivo
 
-            // Só grava se carregar, for de um extrator ATUAL (_ver) e trouxer os símbolos que importam.
-            // Sem o requireVersion, um json antigo publicado no feed viraria cache tóxico permanente.
+            // Só persiste um cache que satisfaz o MESMO contrato READY do auto-extrator.
+            // Versão atual, anchors críticos, Cube v9, ynj, singleton de inventário e ausência de
+            // generic jgc são validados juntos; feed parcial/tampered permanece em modo degradado.
+            if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(body, out _))
+                return null;
+
+            // Preserva a guarda historica especifica do feed para navegacao/stage runtime.
+            // Ela e adicional ao contrato READY canonico; nao o substitui nem o enfraquece.
             var probe = new TaskHeroX.Core.Il2Cpp.SymbolTable();
-            using (var ms = new MemoryStream(body))
-                if (!probe.LoadOffsetsJson(ms, requireVersion: true)) return null;
-            if (!probe.Has("gra") || !probe.Has("uo_ti")) return null;
+            using (var ms = new MemoryStream(body, writable: false))
+                if (!probe.LoadOffsetsJson(ms, requireVersion: true) || !probe.Has("uo_ti"))
+                    return null;
 
             var path = CachePath(hash);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            await File.WriteAllBytesAsync(path, body, ct).ConfigureAwait(false);
-            return path;
+            return await TryPublishValidatedCacheAsync(path, body, ct).ConfigureAwait(false)
+                ? path
+                : null;
         }
         catch
         {
             return null;   // sem rede / disco read-only: segue degradado, o banner explica
+        }
+    }
+
+    internal static async Task<bool> TryPublishValidatedCacheAsync(
+        string path,
+        ReadOnlyMemory<byte> body,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(body, out _))
+            return false;
+
+        string fullPath = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+
+        // Publicacao atomica: nunca grava diretamente no arquivo final. Se houver cancelamento,
+        // crash ou erro de disco durante a escrita, o cache anterior permanece intacto e o
+        // temporario incompleto e descartado.
+        string tempPath = fullPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        try
+        {
+            await File.WriteAllBytesAsync(tempPath, body.ToArray(), ct).ConfigureAwait(false);
+
+            byte[] persisted = await File.ReadAllBytesAsync(tempPath, ct).ConfigureAwait(false);
+            if (!TaskHeroX.Core.Il2Cpp.Il2CppOffsetCache.TryValidateSerialized(persisted, out _))
+                return false;
+
+            File.Move(tempPath, fullPath, overwrite: true);
+            tempPath = string.Empty;
+            return true;
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(tempPath))
+            {
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch
+                {
+                    // best-effort cleanup; nunca promove arquivo parcial ao cache final
+                }
+            }
         }
     }
 }

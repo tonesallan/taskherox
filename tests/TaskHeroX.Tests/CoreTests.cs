@@ -76,6 +76,46 @@ public class CoreTests
     }
 
     [Fact]
+    public void SymbolTable_RequireVersion_RejectsPreCubeLayoutV8Cache()
+    {
+        using var oldCache = new MemoryStream(
+            Encoding.UTF8.GetBytes("""{"_ver":8,"gra":123}"""));
+        using var currentCache = new MemoryStream(
+            Encoding.UTF8.GetBytes(
+                "{\"_ver\":" + SymbolTable.MinExtractVer + ",\"gra\":123}"));
+
+        var oldTable = new SymbolTable();
+        var currentTable = new SymbolTable();
+
+        Assert.False(oldTable.LoadOffsetsJson(oldCache, requireVersion: true));
+        Assert.True(currentTable.LoadOffsetsJson(currentCache, requireVersion: true));
+        Assert.Equal(9, SymbolTable.MinExtractVer);
+    }
+
+    [Fact]
+    public void Engine_LoadOffsetsFrom_RejectsIncompleteV9WithoutMutatingLiveSymbols()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"taskherox_partial_{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, $"{{\"_ver\":{SymbolTable.MinExtractVer},\"gra\":123}}");
+
+        try
+        {
+            using var engine = new Engine();
+            var symbols = new SymbolTable();
+            SetBackingField(engine, "Symbols", symbols);
+
+            Assert.False(engine.LoadOffsetsFrom(path, source: "feed"));
+            Assert.False(symbols.Has("gra"));
+            Assert.False(engine.OffsetsLoaded);
+            Assert.Null(engine.OffsetsSource);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void AutoUpdate_TryParseSha256_AcceptsStandardSidecar()
     {
         const string hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
@@ -130,6 +170,23 @@ public class CoreTests
         Assert.Equal(25, bundle.Compatibility.Stats.Length);
         Assert.All(bundle.Compatibility.Stats, s => Assert.False(s.Readable));
         Assert.DoesNotContain("TONES", bundle.LogTail.Single());
+    }
+
+    [Fact]
+    public void SupportBundleCollector_UsesCanonicalEngineOffsetSource()
+    {
+        using var engine = new Engine();
+        SetBackingField(engine, "OffsetsLoaded", true);
+        SetBackingField(engine, "OffsetsSource", Engine.AutoExtractOffsetsSource);
+
+        var bundle = SupportBundleCollector.Collect(
+            engine,
+            "0.1.1",
+            [],
+            new DateTimeOffset(2026, 9, 18, 15, 45, 0, TimeSpan.Zero));
+
+        Assert.True(bundle.Offsets.Loaded);
+        Assert.Equal(Engine.AutoExtractOffsetsSource, bundle.Offsets.Source);
     }
 
     [Fact]
@@ -192,6 +249,13 @@ public class CoreTests
         Assert.Contains("\"schemaVersion\": \"taskherox.support-bundle/v1\"", json);
         Assert.Contains("\"version\": \"0.1.1\"", json);
         Assert.Contains("\"createdUtc\": \"2026-09-16T01:30:00+00:00\"", json);
+    }
+
+    [Fact]
+    public void Engine_AutoExtractOffsetsSource_IsStableAsciiToken()
+    {
+        Assert.Equal("auto-extract-csharp", Engine.AutoExtractOffsetsSource);
+        Assert.All(Engine.AutoExtractOffsetsSource, ch => Assert.InRange((int)ch, 0, 127));
     }
 
     private static void SetBackingField<TTarget, TValue>(TTarget target, string propertyName, TValue value)

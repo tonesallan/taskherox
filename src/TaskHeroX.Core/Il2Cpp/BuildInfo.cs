@@ -31,4 +31,26 @@ public static class BuildInfo
             return null;
         }
     }
+
+    /// <summary>
+    /// Fingerprint completo para arquivos auxiliares do mesmo build. Diferente de <see cref="DllHash"/>,
+    /// nao e identidade publica da build: serve apenas para provar que um input nao mudou durante uma
+    /// operacao longa como o Il2CppDumper.
+    /// </summary>
+    internal static string? FileSha256(string path)
+    {
+        try
+        {
+            using var fs = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read | FileShare.Delete);
+            return Convert.ToHexStringLower(SHA256.HashData(fs));
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
